@@ -1,0 +1,145 @@
+# AGENTS.md
+
+此文件为 Claude Code 和 Codex 在本仓库（Golang Lab4）工作的统一指南。
+
+## 基本规范
+
+- **默认使用中文** 回复用户与编写源码注释。
+- **谨慎操作工作区**：若发现与当前任务无关的未提交改动，先确认来源后再行动，不要擅自回滚或覆盖。
+- **避免破坏脚手架生成文件**：所有带有 “Code generated” 标记的文件只可通过对应的生成命令更新，禁止手改。
+
+## 学习笔记整理规则
+
+仅当用户明确提出“整理笔记”或“写入笔记”时才执行，目录结构如下：
+
+- `learning/`
+  - `00-index.md`：索引（含日期、主题及链接）
+  - `01-auth-and-jwt.md`：认证 & 双 Token
+  - `02-hertz-and-routing.md`：Hertz / Kratos 路由
+  - `03-redis-cache.md`：Redis / 缓存应用
+  - `04-video-domain.md`：视频/互动/社交业务
+  - 继续按主题扩展
+
+整理笔记时需注明日期、问题与解答、示例代码、文件与行号引用（如 `internal/user/service.go:42`）以及推荐阅读链接，并更新 `00-index.md`。
+
+## 项目概述
+
+本仓库目标是实现 **FanOne 视频平台** 的后端 API（参见 `work4-request.md` 与 https://doc.west2.online/）。平台需覆盖用户、视频、互动、社交四大模块，提供最少 17 个接口，并支持双 Token 认证、Redis 排行榜缓存、文件投稿、Docker 化部署等现代实践。**所有接口协议需要以 Protobuf 描述并通过脚手架生成服务桩**。后续所有课程作业都会在此项目基础上扩展，请保持项目结构清晰、可演进。
+
+## 最低交付接口
+
+| 模块 | 必须实现的接口 | 说明 |
+| --- | --- | --- |
+| 用户 | 注册、登录、获取用户信息、上传头像 | 需返回 access/refresh token，头像上传保存到本地目录 |
+| 视频 | 投稿、发布列表、搜索视频、热门排行榜 | 搜索需满足所有条件；排行榜需引入 Redis 缓存 |
+| 互动 | 点赞操作、点赞列表、评论、评论列表、删除评论 | 仅需对视频点赞/评论；删除时校验作者 |
+| 社交 | 关注/取关、关注列表、粉丝列表、好友列表 | 好友=互相关注 |
+
+接口入参、返回结构及错误码必须与官方文档一致，所有分页接口需正确处理 `page_num`、`page_size`。
+
+## 强制性附加要求
+
+1. **框架与脚手架**：必须使用现代 HTTP 框架（推荐 Hertz/ Kratos）并通过官方脚手架生成基础代码；**IDL 统一改为 Protobuf**。可以使用 `hz` 的 protobuf 流程或 Kratos + protobuf。
+2. **数据库设计**：使用关系型数据库（推荐 MySQL + GORM），合理设计用户、视频、互动、社交相关表，并考虑唯一约束、关联、软删除等需求。
+3. **缓存与排行榜**：视频热门排行榜必须经过 Redis，常见策略为：首次计算后写入缓存，后续请求读取缓存，必要时设置 TTL 及穿透/击穿防护。
+4. **双 Token**：实现访问令牌（15 分钟）与刷新令牌（7 天），所有需要认证的接口校验访问令牌。刷新接口需同时校验刷新令牌并颁发新令牌。
+5. **访问控制**：删除评论、修改视频、关注/取关等动作必须校验请求用户是否有权限。
+6. **文件上传**：投稿接口只需支持单次上传，保存至 `storage/videos/`（或其他约定目录），记录文件元数据。
+7. **Docker 化**：提供 `Dockerfile` 与运行说明，可一键构建并启动服务（环境变量包括 DB/Redis/JWT 等配置）。
+8. **项目结构图**：在 README 或 `docs/` 中提供目录树，帮助答辩时快速说明架构。
+
+## 建议技术栈
+
+- **语言**：Go >= 1.21
+- **HTTP 框架**：CloudWeGo Hertz（或 Kratos / 其他现代框架）
+- **接口定义**：Protobuf + `hz`/`protoc`/`kratos tool`
+- **数据库**：MySQL + GORM
+- **缓存/排行榜**：Redis（Hot list、点赞计数等）
+- **身份认证**：JWT（Access + Refresh）
+- **对象存储**：本地文件系统起步，可预留 MinIO / OSS 扩展能力
+- **构建与部署**：Go Modules、Docker、（可选）docker-compose
+
+## 推荐目录结构（Hertz 示例）
+
+```
+video-platform/
+├── cmd/server/main.go            # 入口
+├── router.go / router_gen.go     # 路由定义（生成 + 自定义）
+├── api/video/v1/video.proto      # Protobuf 接口定义（hz/kratos 生成依据）
+├── biz/
+│   ├── handler/                  # HTTP 处理器
+│   ├── service/                  # 业务逻辑
+│   ├── dal/
+│   │   ├── db/                   # GORM 初始化 & DAO
+│   │   ├── redis/                # Redis 客户端、排行榜
+│   │   └── model/                # User, Video, Like, Comment, Relation 等
+│   └── repository/               # 数据访问封装
+├── pkg/
+│   ├── auth/                     # JWT、密码哈希、双 Token
+│   ├── middleware/               # 认证、日志、限流
+│   └── response/                 # 统一响应结构
+├── storage/videos/               # 投稿文件存储
+├── docs/
+│   ├── README.md                 # API 列表、项目结构图
+│   └── docker.md                 # 部署指南（可选）
+├── Dockerfile
+├── docker-compose.yaml           # 可选：MySQL + Redis + App
+└── Makefile / task.sh            # 脚本化命令
+```
+
+如果切换到 Kratos/其他框架，请保持职责划分一致，并在 README 中同步最新结构图。
+
+## 开发流程与命令建议
+
+1. **生成脚手架**
+   ```bash
+   cd video-platform
+   hz new fanone_video --idl=api/video/v1/video.proto --idl_type=protobuf
+   # 或者 kratos new && make api
+   ```
+2. **依赖管理**
+   ```bash
+   go mod tidy
+   go mod download
+   ```
+3. **本地运行**
+   ```bash
+   go run cmd/server/main.go
+   ```
+4. **构建镜像**
+   ```bash
+   docker build -t fanone-video:latest .
+   docker run --env-file .env -p 8080:8080 fanone-video:latest
+   ```
+5. **辅助脚本**：建议提供 `make proto`, `make run`, `make lint`, `make test` 等。
+
+## 领域特定约束
+
+- **分页**：`page_num` 从 1 开始，`page_size` 默认 10、最大 50。响应需返回 `page_num`、`page_size`、`total`、`items`。
+- **搜索**：视频搜索条件需全部满足（AND 关系），可按标题/标签/作者组合查询。
+- **点赞**：同一用户重复点赞时需幂等处理；取消点赞后排行榜及缓存需同步更新。
+- **评论**：仅支持对视频的一级评论；禁止删除他人评论。
+- **社交关系**：关注、粉丝与好友列表需分页；好友=互相关注。
+- **热点排行榜**：使用 Redis sorted set 或缓存列表，注意 TTL、穿透、雪崩防范，可通过互斥锁、预热、随机过期等方式实现。
+- **日志与监控**：记录关键请求/响应日志，至少包含 request_id、用户 ID、处理耗时。为后续作业留出扩展位。
+
+## 测试与调试建议
+
+- 使用 Apifox / Postman 对照官方文档调试；`base_url` 默认 `http://localhost:8080`。
+- 单元测试覆盖 service 与 repository；重点验证权限校验、分页逻辑、Redis 缓存读写。
+- 引入 `tools/` 目录编写简单的 e2e 测试客户端，依次跑完注册→投稿→点赞→评论→关注流程。
+- 新功能上线前至少手动验证：
+  1. 双 Token 登录、刷新；
+  2. 投稿上传并能在列表 / 搜索 / 热榜中展示；
+  3. 点赞、评论、关注等操作权限正确；
+  4. Docker 镜像可启动并访问 /ping 健康检查。
+
+## Bonus 参考方向
+
+- 完成官方文档全部接口（投稿分片、评论回复、消息通知等）。
+- 点赞与播放量结合 Redis + 定时任务，实现更真实的热榜。
+- 自定义投稿接口以支持大文件分片上传（可结合 MinIO）。
+- 实现 WebSocket 聊天或通知。
+- 引入 ElasticSearch / OpenSearch 进行全文检索，或利用其记录结构化日志。
+
+请在后续任务中持续更新本文件，以保证团队成员能够快速了解当前项目约束与工作流程。

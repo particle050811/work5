@@ -1,0 +1,105 @@
+syntax = "proto3";
+
+package fanone.api.video.v1;
+
+option go_package = "video-platform/api/video/v1;v1";
+
+import "api/video/v1/common.proto";
+
+// Video 为视频数据实体
+message Video {
+  string id = 1;
+  string user_id = 2;
+  string video_url = 3;
+  string cover_url = 4;    // 视频封面图 URL，列表页展示的缩略图
+  string title = 5;
+  string description = 6;  // 视频描述/简介
+  int64 visit_count = 7;
+  int64 like_count = 8;
+  int64 comment_count = 9;
+  string created_at = 10;
+  string updated_at = 11;
+  string deleted_at = 12;
+}
+
+// VideoListWithTotal 同时返回视频和总数
+message VideoListWithTotal {
+  repeated Video items = 1;
+  int64 total = 2;
+}
+
+// ---------- 视频模块请求/响应 ----------
+
+// PublishVideoRequest: 视频文件通过 multipart/form-data 上传
+// 实际 handler 中使用 c.FormFile("video") 获取文件
+message PublishVideoRequest {
+  string title = 1;
+  string description = 2; //视频简介，作者对视频内容的文字说明
+}
+
+message PublishVideoResponse {
+  BaseResponse base = 1;
+}
+
+message ListPublishedVideosRequest {
+  string user_id = 1;
+  PageParams page = 2;
+}
+
+message ListPublishedVideosResponse {
+  BaseResponse base = 1;
+  VideoListWithTotal data = 2;
+}
+
+message SearchVideosRequest {
+  string keywords = 1;
+  int32 page_size = 2;
+  int32 page_num = 3;
+  int64 from_date = 4;
+  int64 to_date = 5;
+  string username = 6;
+  string sort_by = 7;  // 排序方式: "hot"(按热度), "latest"(按时间最新), 默认 "latest"
+}
+
+message SearchVideosResponse {
+  BaseResponse base = 1;
+  VideoListWithTotal data = 2;
+}
+
+// ListVideoCommentsRequest: 获取某视频下的评论列表
+message ListVideoCommentsRequest {
+  string video_id = 1;
+  PageParams page = 2;
+}
+
+message ListVideoCommentsResponse {
+  BaseResponse base = 1;
+  VideoCommentList data = 2;
+}
+
+// VideoCommentList: 视频评论列表（简化版，不含完整 Comment 结构）
+message VideoCommentList {
+  repeated VideoComment items = 1;
+  int64 total = 2;
+}
+
+// VideoComment: 视频下的评论信息（包含评论者基础信息）
+message VideoComment {
+  string id = 1;
+  string user_id = 2;
+  string username = 3;     // 评论者用户名
+  string avatar_url = 4;   // 评论者头像
+  string content = 5;
+  int64 like_count = 6;
+  string created_at = 7;
+}
+
+// ---------- Service 定义 ----------
+
+service VideoService {
+  rpc PublishVideo(PublishVideoRequest) returns (PublishVideoResponse);
+  rpc ListPublishedVideos(ListPublishedVideosRequest)
+      returns (ListPublishedVideosResponse);
+  rpc SearchVideos(SearchVideosRequest) returns (SearchVideosResponse);
+  rpc ListVideoComments(ListVideoCommentsRequest) returns (ListVideoCommentsResponse);
+}
