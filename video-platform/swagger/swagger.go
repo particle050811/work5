@@ -3,6 +3,8 @@ package swagger
 import (
 	"context"
 	_ "embed"
+	"log"
+	"os"
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/app/server"
@@ -26,6 +28,13 @@ var relationYAML []byte
 // BindSwagger 绑定所有模块的 Swagger UI
 func BindSwagger(h *server.Hertz) {
 	h.Use(cors.Default())
+
+	// 挂载本地静态资源：用于访问上传后的头像文件
+	// 约定 UploadAvatar 返回的 avatar_url 形如：/storage/avatars/<filename>
+	if err := os.MkdirAll("./storage/avatars", 0o755); err != nil {
+		log.Printf("创建头像目录失败: %v", err)
+	}
+	h.Static("/storage/avatars", "./storage/avatars")
 
 	// 各模块独立的 Swagger UI
 	// 用户模块: /swagger/user/index.html
