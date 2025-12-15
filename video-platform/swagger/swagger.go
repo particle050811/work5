@@ -36,6 +36,13 @@ func BindSwagger(h *server.Hertz) {
 	}
 	h.Static("/storage/avatars", "./storage/avatars")
 
+	// 挂载本地静态资源：用于访问上传后的视频文件
+	// 约定 PublishVideo 返回的 video_url 形如：/storage/videos/<filename>
+	if err := os.MkdirAll("./storage/videos", 0o755); err != nil {
+		log.Printf("创建视频目录失败: %v", err)
+	}
+	h.Static("/storage/videos", "./storage/videos")
+
 	// 各模块独立的 Swagger UI
 	// 用户模块: /swagger/user/index.html
 	h.GET("/swagger/user/*any", swagger.WrapHandler(swaggerFiles.Handler, swagger.URL("/openapi/user.yaml")))

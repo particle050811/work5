@@ -13,7 +13,7 @@ import (
 // Store 统一数据访问层，聚合 MySQL 和 Redis
 type Store struct {
 	db    *gorm.DB
-	redis *redis.Client // 可为 nil（降级模式）
+	redis *redis.Client
 }
 
 // 确保 Store 实现 StoreLike 接口
@@ -47,7 +47,7 @@ func (s *Store) Redis() RedisClient {
 
 // HasRedis 检查 Redis 是否可用
 func (s *Store) HasRedis() bool {
-	return s.redis != nil
+	return true
 }
 
 // WithTx 在事务中执行操作，返回带事务的 Store
@@ -74,7 +74,11 @@ func (s *Store) Close() error {
 
 // autoMigrate 自动迁移所有模型
 func autoMigrate(gormDB *gorm.DB) {
-	err := gormDB.AutoMigrate(&model.User{})
+	err := gormDB.AutoMigrate(
+		&model.User{},
+		&model.Video{},
+		&model.Comment{},
+	)
 	if err != nil {
 		log.Fatalf("数据库迁移失败: %v", err)
 	}

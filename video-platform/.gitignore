@@ -41,3 +41,6 @@ dumped_hertz_remote_config.json
 
 # 调试产物
 __debug_bin*
+
+# 上传的图片和视频文件
+/storage

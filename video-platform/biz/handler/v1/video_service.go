@@ -4,88 +4,446 @@ package v1
 
 import (
 	"context"
+	"fmt"
+	"log"
+	"path/filepath"
+	"strconv"
+	"strings"
+	"time"
+
+	"video-platform/biz/dal"
+	"video-platform/biz/dal/db"
+	"video-platform/biz/dal/model"
 	v1 "video-platform/biz/model/api/video/v1"
+	"video-platform/pkg/response"
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/protocol/consts"
+	"github.com/redis/go-redis/v9"
 )
 
 // PublishVideo .
 // @router /api/v1/video/publish [POST]
 func PublishVideo(ctx context.Context, c *app.RequestContext) {
-	var err error
 	var req v1.PublishVideoRequest
-	err = c.BindAndValidate(&req)
-	if err != nil {
-		c.String(consts.StatusBadRequest, err.Error())
+	if err := c.BindAndValidate(&req); err != nil {
+		c.JSON(consts.StatusBadRequest, &v1.PublishVideoResponse{
+			Base: response.ParamError(err.Error()),
+		})
 		return
 	}
 
-	resp := new(v1.PublishVideoResponse)
+	userIDValue, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(consts.StatusUnauthorized, &v1.PublishVideoResponse{
+			Base: response.Unauthorized(),
+		})
+		return
+	}
+	userID := userIDValue.(uint)
 
-	c.JSON(consts.StatusOK, resp)
+	fileHeader, err := c.FormFile("video")
+	if err != nil {
+		c.JSON(consts.StatusBadRequest, &v1.PublishVideoResponse{
+			Base: response.ParamError("请上传视频文件，字段名为 video"),
+		})
+		return
+	}
+
+	title := strings.TrimSpace(req.Title)
+	if title == "" {
+		c.JSON(consts.StatusBadRequest, &v1.PublishVideoResponse{
+			Base: response.ParamError("title 不能为空"),
+		})
+		return
+	}
+
+	// 生成文件名并保存到 storage/videos
+	ext := filepath.Ext(fileHeader.Filename)
+	if ext == "" {
+		ext = ".mp4"
+	}
+	filename := fmt.Sprintf("video_%d_%d%s", userID, time.Now().UnixNano(), ext)
+	savePath := filepath.Join("storage", "videos", filename)
+	if err := c.SaveUploadedFile(fileHeader, savePath); err != nil {
+		log.Printf("保存视频失败: %v", err)
+		c.JSON(consts.StatusInternalServerError, &v1.PublishVideoResponse{
+			Base: response.InternalError(),
+		})
+		return
+	}
+
+	store := dal.GetStore()
+	video := &model.Video{
+		UserID:      userID,
+		VideoURL:    fmt.Sprintf("/storage/videos/%s", filename),
+		Title:       title,
+		Description: strings.TrimSpace(req.Description),
+	}
+	if err := db.CreateVideo(store, video); err != nil {
+		log.Printf("创建视频记录失败: %v", err)
+		c.JSON(consts.StatusInternalServerError, &v1.PublishVideoResponse{
+			Base: response.InternalError(),
+		})
+		return
+	}
+
+	c.JSON(consts.StatusOK, &v1.PublishVideoResponse{
+		Base: response.Success("投稿成功"),
+	})
 }
 
 // ListPublishedVideos .
 // @router /api/v1/video/list [GET]
 func ListPublishedVideos(ctx context.Context, c *app.RequestContext) {
-	var err error
 	var req v1.ListPublishedVideosRequest
-	err = c.BindAndValidate(&req)
-	if err != nil {
-		c.String(consts.StatusBadRequest, err.Error())
+	if err := c.BindAndValidate(&req); err != nil {
+		c.JSON(consts.StatusBadRequest, &v1.ListPublishedVideosResponse{
+			Base: response.ParamError(err.Error()),
+		})
 		return
 	}
 
-	resp := new(v1.ListPublishedVideosResponse)
+	if strings.TrimSpace(req.UserId) == "" {
+		c.JSON(consts.StatusBadRequest, &v1.ListPublishedVideosResponse{
+			Base: response.ParamError("user_id 不能为空"),
+		})
+		return
+	}
+	userID, err := parseUint(req.UserId)
+	if err != nil {
+		c.JSON(consts.StatusBadRequest, &v1.ListPublishedVideosResponse{
+			Base: response.ParamError("user_id 格式错误"),
+		})
+		return
+	}
 
-	c.JSON(consts.StatusOK, resp)
+	pageNum, pageSize, offset := normalizePage(req.PageNum, req.PageSize)
+
+	store := dal.GetStore()
+	videos, total, err := db.ListVideosByUser(store, userID, offset, pageSize)
+	if err != nil {
+		log.Printf("查询发布列表失败: %v", err)
+		c.JSON(consts.StatusInternalServerError, &v1.ListPublishedVideosResponse{
+			Base: response.InternalError(),
+		})
+		return
+	}
+
+	items := make([]*v1.Video, 0, len(videos))
+	for i := range videos {
+		items = append(items, modelToProtoVideo(&videos[i]))
+	}
+
+	c.JSON(consts.StatusOK, &v1.ListPublishedVideosResponse{
+		Base: response.Success(),
+		Data: &v1.VideoListWithTotal{
+			Items: items,
+			Total: total,
+		},
+	})
+	_ = pageNum // 兼容未来需要返回 page 字段的扩展（当前 proto 未包含）
 }
 
 // SearchVideos .
 // @router /api/v1/video/search [GET]
 func SearchVideos(ctx context.Context, c *app.RequestContext) {
-	var err error
 	var req v1.SearchVideosRequest
-	err = c.BindAndValidate(&req)
-	if err != nil {
-		c.String(consts.StatusBadRequest, err.Error())
+	if err := c.BindAndValidate(&req); err != nil {
+		c.JSON(consts.StatusBadRequest, &v1.SearchVideosResponse{
+			Base: response.ParamError(err.Error()),
+		})
 		return
 	}
 
-	resp := new(v1.SearchVideosResponse)
+	pageNum, pageSize, offset := normalizePage(req.PageNum, req.PageSize)
+	sortBy := strings.TrimSpace(strings.ToLower(req.SortBy))
+	sortByHot := sortBy == "hot"
 
-	c.JSON(consts.StatusOK, resp)
+	from, to := parseUnixRange(req.FromDate, req.ToDate)
+
+	store := dal.GetStore()
+	videos, total, err := db.SearchVideos(store, db.SearchVideosParams{
+		Keywords:  strings.TrimSpace(req.Keywords),
+		Username:  strings.TrimSpace(req.Username),
+		FromDate:  from,
+		ToDate:    to,
+		SortByHot: sortByHot,
+	}, offset, pageSize)
+	if err != nil {
+		log.Printf("搜索视频失败: %v", err)
+		c.JSON(consts.StatusInternalServerError, &v1.SearchVideosResponse{
+			Base: response.InternalError(),
+		})
+		return
+	}
+
+	items := make([]*v1.Video, 0, len(videos))
+	for i := range videos {
+		items = append(items, modelToProtoVideo(&videos[i]))
+	}
+
+	c.JSON(consts.StatusOK, &v1.SearchVideosResponse{
+		Base: response.Success(),
+		Data: &v1.VideoListWithTotal{
+			Items: items,
+			Total: total,
+		},
+	})
+	_ = pageNum
 }
 
 // ListVideoComments .
 // @router /api/v1/video/comments [GET]
 func ListVideoComments(ctx context.Context, c *app.RequestContext) {
-	var err error
 	var req v1.ListVideoCommentsRequest
-	err = c.BindAndValidate(&req)
-	if err != nil {
-		c.String(consts.StatusBadRequest, err.Error())
+	if err := c.BindAndValidate(&req); err != nil {
+		c.JSON(consts.StatusBadRequest, &v1.ListVideoCommentsResponse{
+			Base: response.ParamError(err.Error()),
+		})
 		return
 	}
 
-	resp := new(v1.ListVideoCommentsResponse)
+	if strings.TrimSpace(req.VideoId) == "" {
+		c.JSON(consts.StatusBadRequest, &v1.ListVideoCommentsResponse{
+			Base: response.ParamError("video_id 不能为空"),
+		})
+		return
+	}
+	videoID, err := parseUint(req.VideoId)
+	if err != nil {
+		c.JSON(consts.StatusBadRequest, &v1.ListVideoCommentsResponse{
+			Base: response.ParamError("video_id 格式错误"),
+		})
+		return
+	}
 
-	c.JSON(consts.StatusOK, resp)
+	_, pageSize, offset := normalizePage(req.PageNum, req.PageSize)
+	store := dal.GetStore()
+
+	items, total, err := db.ListTopLevelCommentsByVideo(store, videoID, offset, pageSize)
+	if err != nil {
+		log.Printf("查询视频评论失败: %v", err)
+		c.JSON(consts.StatusInternalServerError, &v1.ListVideoCommentsResponse{
+			Base: response.InternalError(),
+		})
+		return
+	}
+
+	out := make([]*v1.VideoComment, 0, len(items))
+	for _, it := range items {
+		out = append(out, &v1.VideoComment{
+			Id:        fmt.Sprintf("%d", it.ID),
+			UserId:    fmt.Sprintf("%d", it.UserID),
+			Username:  it.Username,
+			AvatarUrl: it.AvatarURL,
+			Content:   it.Content,
+			LikeCount: it.LikeCount,
+			CreatedAt: it.CreatedAt.Format("2006-01-02 15:04:05"),
+		})
+	}
+
+	c.JSON(consts.StatusOK, &v1.ListVideoCommentsResponse{
+		Base: response.Success(),
+		Data: &v1.VideoCommentList{
+			Items: out,
+			Total: total,
+		},
+	})
 }
 
 // GetHotVideos .
 // @router /api/v1/video/hot [GET]
 func GetHotVideos(ctx context.Context, c *app.RequestContext) {
-	var err error
 	var req v1.GetHotVideosRequest
-	err = c.BindAndValidate(&req)
-	if err != nil {
-		c.String(consts.StatusBadRequest, err.Error())
+	if err := c.BindAndValidate(&req); err != nil {
+		c.JSON(consts.StatusBadRequest, &v1.GetHotVideosResponse{
+			Base: response.ParamError(err.Error()),
+		})
 		return
 	}
 
-	resp := new(v1.GetHotVideosResponse)
+	_, pageSize, offset := normalizePage(req.PageNum, req.PageSize)
 
-	c.JSON(consts.StatusOK, resp)
+	store := dal.GetStore()
+	videos, total, err := getHotVideos(ctx, store, offset, pageSize)
+	if err != nil {
+		log.Printf("获取热榜失败: %v", err)
+		c.JSON(consts.StatusInternalServerError, &v1.GetHotVideosResponse{
+			Base: response.InternalError(),
+		})
+		return
+	}
+
+	items := make([]*v1.Video, 0, len(videos))
+	for i := range videos {
+		items = append(items, modelToProtoVideo(&videos[i]))
+	}
+
+	c.JSON(consts.StatusOK, &v1.GetHotVideosResponse{
+		Base: response.Success(),
+		Data: &v1.VideoListWithTotal{
+			Items: items,
+			Total: total,
+		},
+	})
+}
+
+func modelToProtoVideo(v *model.Video) *v1.Video {
+	if v == nil {
+		return nil
+	}
+	out := &v1.Video{
+		Id:           fmt.Sprintf("%d", v.ID),
+		UserId:       fmt.Sprintf("%d", v.UserID),
+		VideoUrl:     v.VideoURL,
+		CoverUrl:     v.CoverURL,
+		Title:        v.Title,
+		Description:  v.Description,
+		VisitCount:   v.VisitCount,
+		LikeCount:    v.LikeCount,
+		CommentCount: v.CommentCount,
+		CreatedAt:    v.CreatedAt.Format("2006-01-02 15:04:05"),
+		UpdatedAt:    v.UpdatedAt.Format("2006-01-02 15:04:05"),
+	}
+	if v.DeletedAt.Valid {
+		out.DeletedAt = v.DeletedAt.Time.Format("2006-01-02 15:04:05")
+	}
+	return out
+}
+
+func normalizePage(pageNum, pageSize int32) (int, int, int) {
+	pn := int(pageNum)
+	ps := int(pageSize)
+	if pn < 1 {
+		pn = 1
+	}
+	if ps <= 0 {
+		ps = 10
+	}
+	if ps > 50 {
+		ps = 50
+	}
+	return pn, ps, (pn - 1) * ps
+}
+
+func parseUint(s string) (uint, error) {
+	u64, err := strconv.ParseUint(strings.TrimSpace(s), 10, 64)
+	if err != nil {
+		return 0, err
+	}
+	return uint(u64), nil
+}
+
+func parseUnixRange(fromDate, toDate int64) (*time.Time, *time.Time) {
+	var from, to *time.Time
+	if fromDate > 0 {
+		t := unixToTime(fromDate)
+		from = &t
+	}
+	if toDate > 0 {
+		t := unixToTime(toDate)
+		to = &t
+	}
+	return from, to
+}
+
+func unixToTime(ts int64) time.Time {
+	// 兼容毫秒/秒时间戳
+	if ts > 1_000_000_000_000 {
+		return time.UnixMilli(ts)
+	}
+	return time.Unix(ts, 0)
+}
+
+func getHotVideos(ctx context.Context, store dal.StoreLike, offset, limit int) ([]model.Video, int64, error) {
+	var total int64
+	if err := store.DB().Model(&model.Video{}).Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
+	const (
+		key      = "fanone:video:hot:zset"
+		cacheTTL = 5 * time.Minute
+		topN     = 200
+	)
+
+	redisCli := store.Redis()
+	exists, err := redisCli.Exists(ctx, key).Result()
+	if err != nil {
+		return nil, 0, err
+	}
+	if exists == 0 {
+		if err := rebuildHotVideosZSet(ctx, store, redisCli, key, cacheTTL, topN); err != nil {
+			return nil, 0, err
+		}
+	}
+
+	zs, err := redisCli.ZRevRangeWithScores(ctx, key, int64(offset), int64(offset+limit-1)).Result()
+	if err != nil {
+		return nil, 0, err
+	}
+
+	ids := make([]uint, 0, len(zs))
+	for _, z := range zs {
+		idStr, ok := z.Member.(string)
+		if !ok {
+			continue
+		}
+		id, err := parseUint(idStr)
+		if err != nil {
+			continue
+		}
+		ids = append(ids, id)
+	}
+
+	videos, err := db.GetVideosByIDs(store, ids)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	byID := make(map[uint]model.Video, len(videos))
+	for i := range videos {
+		byID[videos[i].ID] = videos[i]
+	}
+	ordered := make([]model.Video, 0, len(ids))
+	for _, id := range ids {
+		if v, ok := byID[id]; ok {
+			ordered = append(ordered, v)
+		}
+	}
+	return ordered, total, nil
+}
+
+func rebuildHotVideosZSet(ctx context.Context, store dal.StoreLike, redisCli dal.RedisClient, key string, ttl time.Duration, topN int) error {
+	var top []model.Video
+	if err := store.DB().
+		Model(&model.Video{}).
+		Order("(like_count*3 + comment_count*2 + visit_count) desc").
+		Limit(topN).
+		Find(&top).Error; err != nil {
+		return err
+	}
+
+	zs := make([]redis.Z, 0, len(top))
+	for i := range top {
+		score := float64(top[i].LikeCount*3 + top[i].CommentCount*2 + top[i].VisitCount)
+		zs = append(zs, redis.Z{
+			Score:  score,
+			Member: fmt.Sprintf("%d", top[i].ID),
+		})
+	}
+
+	if err := redisCli.Del(ctx, key).Err(); err != nil {
+		return err
+	}
+	if len(zs) > 0 {
+		if err := redisCli.ZAdd(ctx, key, zs...).Err(); err != nil {
+			return err
+		}
+	}
+	if err := redisCli.Expire(ctx, key, ttl).Err(); err != nil {
+		return err
+	}
+	return nil
 }

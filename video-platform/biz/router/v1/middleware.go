@@ -73,8 +73,8 @@ func _listpublishedvideosMw() []app.HandlerFunc {
 }
 
 func _publishvideoMw() []app.HandlerFunc {
-	// your code...
-	return nil
+	// 投稿需要认证
+	return []app.HandlerFunc{middleware.AuthMiddleware()}
 }
 
 func _searchvideosMw() []app.HandlerFunc {
