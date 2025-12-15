@@ -96,6 +96,54 @@ type ListVideoCommentsResponse struct {
 	Data VideoCommentList `json:"data"`
 }
 
+// ====== 互动模块类型 ======
+
+// Comment 用户评论
+type Comment struct {
+	ID         string `json:"id"`
+	UserID     string `json:"user_id"`
+	VideoID    string `json:"video_id"`
+	ParentID   string `json:"parent_id"`
+	LikeCount  int64  `json:"like_count"`
+	ChildCount int64  `json:"child_count"`
+	Content    string `json:"content"`
+	CreatedAt  string `json:"created_at"`
+	UpdatedAt  string `json:"updated_at"`
+	DeletedAt  string `json:"deleted_at"`
+}
+
+type CommentListWithTotal struct {
+	Items []Comment `json:"items"`
+	Total int64     `json:"total"`
+}
+
+// VideoLikeActionResponse 点赞/取消点赞响应
+type VideoLikeActionResponse struct {
+	Base BaseResponse `json:"base"`
+}
+
+// ListLikedVideosResponse 点赞列表响应
+type ListLikedVideosResponse struct {
+	Base BaseResponse       `json:"base"`
+	Data VideoListWithTotal `json:"data"`
+}
+
+// PublishCommentResponse 发布评论响应
+type PublishCommentResponse struct {
+	Base BaseResponse `json:"base"`
+}
+
+// ListUserCommentsResponse 用户评论列表响应
+type ListUserCommentsResponse struct {
+	Base BaseResponse         `json:"base"`
+	Data CommentListWithTotal `json:"data"`
+}
+
+// DeleteCommentResponse 删除评论响应
+type DeleteCommentResponse struct {
+	Base BaseResponse `json:"base"`
+}
+
 // 请求结果封装，包含错误信息
 type Result[T any] struct {
 	Data       T

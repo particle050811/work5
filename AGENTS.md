@@ -212,6 +212,37 @@ protoc --http-swagger_out=swagger/relation --proto_path=. api/video/v1/relation.
   3. 点赞、评论、关注等操作权限正确；
   4. Docker 镜像可启动并访问 /ping 健康检查。
 
+### 强制性测试要求
+
+**每次代码修改后必须执行 e2e 测试**：
+1. 修改或新增接口实现后，同步更新 `test/` 目录下的测试文件
+2. 运行 e2e 测试客户端验证所有相关功能
+3. 确保所有测试用例通过后再提交代码
+
+测试执行流程：
+```bash
+# 1. 启动服务（后台运行）
+cd video-platform && go run . &
+
+# 2. 等待服务启动后运行测试
+cd ../test && go run .
+
+# 3. 检查测试结果，确保全部通过
+```
+
+测试文件结构：
+- `test/main.go`：测试入口与流程编排
+- `test/types.go`：响应类型定义
+- `test/user.go`：用户模块测试
+- `test/video.go`：视频模块测试
+- `test/interaction.go`：互动模块测试
+- `test/relation.go`：社交模块测试（待添加）
+
+新增接口时需：
+1. 在 `types.go` 中添加对应的响应类型
+2. 在对应模块文件中添加测试函数
+3. 在 `main.go` 中添加测试用例调用
+
 ## Bonus 参考方向
 
 - 完成官方文档全部接口（投稿分片、评论回复、消息通知等）。

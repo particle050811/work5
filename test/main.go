@@ -293,6 +293,183 @@ func main() {
 	}
 	fmt.Println()
 
+	// ====== 互动模块 ======
+	fmt.Println("========== 互动模块 ==========")
+
+	// 14. 测试点赞视频
+	fmt.Println("【14】测试点赞视频（需要登录）")
+	if latestVideo == nil || latestVideo.ID == "" || accessToken == "" {
+		fmt.Println("    - 跳过（无 video_id 或未登录）")
+	} else {
+		likeResult := testVideoLikeAction(client, baseURL, accessToken, latestVideo.ID, 1)
+		if likeResult.Err != nil {
+			fmt.Printf("    ✗ 请求失败: %v\n", likeResult.Err)
+			addError("14", fmt.Sprintf("请求失败: %v", likeResult.Err))
+		} else if likeResult.Data.Base.Code == 0 {
+			fmt.Printf("    ✓ 点赞成功: %s\n", likeResult.Data.Base.Msg)
+		} else {
+			fmt.Printf("    ✗ 点赞失败: %s（HTTP %d）\n", likeResult.Data.Base.Msg, likeResult.StatusCode)
+			addError("14", fmt.Sprintf("点赞失败: %s", likeResult.Data.Base.Msg))
+		}
+	}
+	fmt.Println()
+
+	// 15. 测试重复点赞（应该幂等成功）
+	fmt.Println("【15】测试重复点赞（应该幂等成功）")
+	if latestVideo == nil || latestVideo.ID == "" || accessToken == "" {
+		fmt.Println("    - 跳过（无 video_id 或未登录）")
+	} else {
+		likeResult2 := testVideoLikeAction(client, baseURL, accessToken, latestVideo.ID, 1)
+		if likeResult2.Err != nil {
+			fmt.Printf("    ✗ 请求失败: %v\n", likeResult2.Err)
+			addError("15", fmt.Sprintf("请求失败: %v", likeResult2.Err))
+		} else if likeResult2.Data.Base.Code == 0 {
+			fmt.Printf("    ✓ 符合预期，重复点赞幂等成功: %s\n", likeResult2.Data.Base.Msg)
+		} else {
+			fmt.Printf("    ✗ 重复点赞失败: %s（HTTP %d）\n", likeResult2.Data.Base.Msg, likeResult2.StatusCode)
+			addError("15", fmt.Sprintf("重复点赞应幂等成功，但失败了: %s", likeResult2.Data.Base.Msg))
+		}
+	}
+	fmt.Println()
+
+	// 16. 测试点赞列表
+	fmt.Println("【16】测试获取点赞列表")
+	if userID == "" {
+		fmt.Println("    - 跳过（无 user_id）")
+	} else {
+		likedResult := testListLikedVideos(client, baseURL, userID, 1, 10)
+		if likedResult.Err != nil {
+			fmt.Printf("    ✗ 请求失败: %v\n", likedResult.Err)
+			addError("16", fmt.Sprintf("请求失败: %v", likedResult.Err))
+		} else if likedResult.Data.Base.Code == 0 {
+			fmt.Printf("    ✓ 获取成功，总数: %d，本页: %d\n", likedResult.Data.Data.Total, len(likedResult.Data.Data.Items))
+			if latestVideo != nil && likedResult.Data.Data.Total > 0 {
+				found := false
+				for _, v := range likedResult.Data.Data.Items {
+					if v.ID == latestVideo.ID {
+						found = true
+						break
+					}
+				}
+				if found {
+					fmt.Printf("    ✓ 符合预期：点赞列表包含刚点赞的视频\n")
+				} else {
+					fmt.Printf("    ✗ 不符合预期：点赞列表未包含刚点赞的视频\n")
+					addError("16", "点赞列表未包含刚点赞的视频")
+				}
+			}
+		} else {
+			fmt.Printf("    ✗ 获取失败: %s（HTTP %d）\n", likedResult.Data.Base.Msg, likedResult.StatusCode)
+			addError("16", fmt.Sprintf("获取失败: %s", likedResult.Data.Base.Msg))
+		}
+	}
+	fmt.Println()
+
+	// 17. 测试取消点赞
+	fmt.Println("【17】测试取消点赞")
+	if latestVideo == nil || latestVideo.ID == "" || accessToken == "" {
+		fmt.Println("    - 跳过（无 video_id 或未登录）")
+	} else {
+		unlikeResult := testVideoLikeAction(client, baseURL, accessToken, latestVideo.ID, 2)
+		if unlikeResult.Err != nil {
+			fmt.Printf("    ✗ 请求失败: %v\n", unlikeResult.Err)
+			addError("17", fmt.Sprintf("请求失败: %v", unlikeResult.Err))
+		} else if unlikeResult.Data.Base.Code == 0 {
+			fmt.Printf("    ✓ 取消点赞成功: %s\n", unlikeResult.Data.Base.Msg)
+		} else {
+			fmt.Printf("    ✗ 取消点赞失败: %s（HTTP %d）\n", unlikeResult.Data.Base.Msg, unlikeResult.StatusCode)
+			addError("17", fmt.Sprintf("取消点赞失败: %s", unlikeResult.Data.Base.Msg))
+		}
+	}
+	fmt.Println()
+
+	// 18. 测试发布评论
+	fmt.Println("【18】测试发布评论（需要登录）")
+	commentContent := fmt.Sprintf("这是测试评论 %d", time.Now().Unix())
+	var latestCommentID string
+	if latestVideo == nil || latestVideo.ID == "" || accessToken == "" {
+		fmt.Println("    - 跳过（无 video_id 或未登录）")
+	} else {
+		commentResult := testPublishComment(client, baseURL, accessToken, latestVideo.ID, commentContent)
+		if commentResult.Err != nil {
+			fmt.Printf("    ✗ 请求失败: %v\n", commentResult.Err)
+			addError("18", fmt.Sprintf("请求失败: %v", commentResult.Err))
+		} else if commentResult.Data.Base.Code == 0 {
+			fmt.Printf("    ✓ 评论成功: %s\n", commentResult.Data.Base.Msg)
+		} else {
+			fmt.Printf("    ✗ 评论失败: %s（HTTP %d）\n", commentResult.Data.Base.Msg, commentResult.StatusCode)
+			addError("18", fmt.Sprintf("评论失败: %s", commentResult.Data.Base.Msg))
+		}
+	}
+	fmt.Println()
+
+	// 19. 测试获取用户评论列表
+	fmt.Println("【19】测试获取用户评论列表")
+	if userID == "" {
+		fmt.Println("    - 跳过（无 user_id）")
+	} else {
+		userCommentsResult := testListUserComments(client, baseURL, userID, 1, 10)
+		if userCommentsResult.Err != nil {
+			fmt.Printf("    ✗ 请求失败: %v\n", userCommentsResult.Err)
+			addError("19", fmt.Sprintf("请求失败: %v", userCommentsResult.Err))
+		} else if userCommentsResult.Data.Base.Code == 0 {
+			fmt.Printf("    ✓ 获取成功，总数: %d，本页: %d\n", userCommentsResult.Data.Data.Total, len(userCommentsResult.Data.Data.Items))
+			// 找到刚发布的评论
+			for _, c := range userCommentsResult.Data.Data.Items {
+				if c.Content == commentContent {
+					latestCommentID = c.ID
+					fmt.Printf("    ✓ 符合预期：找到刚发布的评论（ID: %s）\n", latestCommentID)
+					break
+				}
+			}
+			if latestCommentID == "" && len(userCommentsResult.Data.Data.Items) > 0 {
+				// 取第一条作为测试删除用
+				latestCommentID = userCommentsResult.Data.Data.Items[0].ID
+				fmt.Printf("    - 提示：未找到刚发布的评论，使用最新评论（ID: %s）进行后续测试\n", latestCommentID)
+			}
+		} else {
+			fmt.Printf("    ✗ 获取失败: %s（HTTP %d）\n", userCommentsResult.Data.Base.Msg, userCommentsResult.StatusCode)
+			addError("19", fmt.Sprintf("获取失败: %s", userCommentsResult.Data.Base.Msg))
+		}
+	}
+	fmt.Println()
+
+	// 20. 测试删除评论
+	fmt.Println("【20】测试删除评论（需要登录+作者权限）")
+	if latestCommentID == "" || accessToken == "" {
+		fmt.Println("    - 跳过（无 comment_id 或未登录）")
+	} else {
+		deleteResult := testDeleteComment(client, baseURL, accessToken, latestCommentID)
+		if deleteResult.Err != nil {
+			fmt.Printf("    ✗ 请求失败: %v\n", deleteResult.Err)
+			addError("20", fmt.Sprintf("请求失败: %v", deleteResult.Err))
+		} else if deleteResult.Data.Base.Code == 0 {
+			fmt.Printf("    ✓ 删除成功: %s\n", deleteResult.Data.Base.Msg)
+		} else {
+			fmt.Printf("    ✗ 删除失败: %s（HTTP %d）\n", deleteResult.Data.Base.Msg, deleteResult.StatusCode)
+			addError("20", fmt.Sprintf("删除失败: %s", deleteResult.Data.Base.Msg))
+		}
+	}
+	fmt.Println()
+
+	// 21. 测试删除他人评论（应该失败）
+	fmt.Println("【21】测试删除已删除的评论（应该失败-评论不存在）")
+	if latestCommentID == "" || accessToken == "" {
+		fmt.Println("    - 跳过（无 comment_id 或未登录）")
+	} else {
+		deleteResult2 := testDeleteComment(client, baseURL, accessToken, latestCommentID)
+		if deleteResult2.Err != nil {
+			fmt.Printf("    ✗ 请求失败: %v\n", deleteResult2.Err)
+			addError("21", fmt.Sprintf("请求失败: %v", deleteResult2.Err))
+		} else if deleteResult2.Data.Base.Code != 0 {
+			fmt.Printf("    ✓ 符合预期，删除被拒绝: %s\n", deleteResult2.Data.Base.Msg)
+		} else {
+			fmt.Printf("    ✗ 不符合预期，删除已删除的评论应该失败\n")
+			addError("21", "删除已删除的评论应该失败，但实际成功了")
+		}
+	}
+	fmt.Println()
+
 	// 输出测试汇总
 	fmt.Println("========== 测试完成 ==========")
 	if len(errors) == 0 {

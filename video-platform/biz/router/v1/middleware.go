@@ -93,13 +93,13 @@ func _commentMw() []app.HandlerFunc {
 }
 
 func _publishcommentMw() []app.HandlerFunc {
-	// your code...
-	return nil
+	// 发布评论需要认证
+	return []app.HandlerFunc{middleware.AuthMiddleware()}
 }
 
 func _deletecommentMw() []app.HandlerFunc {
-	// your code...
-	return nil
+	// 删除评论需要认证
+	return []app.HandlerFunc{middleware.AuthMiddleware()}
 }
 
 func _listusercommentsMw() []app.HandlerFunc {
@@ -113,8 +113,8 @@ func _likeMw() []app.HandlerFunc {
 }
 
 func _videolikeactionMw() []app.HandlerFunc {
-	// your code...
-	return nil
+	// 点赞操作需要认证
+	return []app.HandlerFunc{middleware.AuthMiddleware()}
 }
 
 func _listlikedvideosMw() []app.HandlerFunc {

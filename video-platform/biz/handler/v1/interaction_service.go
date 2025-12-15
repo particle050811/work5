@@ -4,88 +4,505 @@ package v1
 
 import (
 	"context"
+	"fmt"
+	"log"
+	"strconv"
+	"strings"
+
+	"video-platform/biz/dal"
+	"video-platform/biz/dal/db"
+	"video-platform/biz/dal/model"
 	v1 "video-platform/biz/model/api/video/v1"
+	"video-platform/pkg/response"
 
 	"github.com/cloudwego/hertz/pkg/app"
 	"github.com/cloudwego/hertz/pkg/protocol/consts"
 )
 
-// VideoLikeAction .
+const hotVideosKey = "fanone:video:hot:zset"
+
+// VideoLikeAction 点赞/取消点赞视频
 // @router /api/v1/interaction/like [POST]
 func VideoLikeAction(ctx context.Context, c *app.RequestContext) {
-	var err error
 	var req v1.VideoLikeActionRequest
-	err = c.BindAndValidate(&req)
-	if err != nil {
-		c.String(consts.StatusBadRequest, err.Error())
+	if err := c.BindAndValidate(&req); err != nil {
+		c.JSON(consts.StatusBadRequest, &v1.VideoLikeActionResponse{
+			Base: response.ParamError(err.Error()),
+		})
 		return
 	}
 
-	resp := new(v1.VideoLikeActionResponse)
+	// 获取当前登录用户
+	userIDValue, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(consts.StatusUnauthorized, &v1.VideoLikeActionResponse{
+			Base: response.Unauthorized(),
+		})
+		return
+	}
+	userID := userIDValue.(uint)
 
-	c.JSON(consts.StatusOK, resp)
+	// 校验 video_id
+	if strings.TrimSpace(req.VideoId) == "" {
+		c.JSON(consts.StatusBadRequest, &v1.VideoLikeActionResponse{
+			Base: response.ParamError("video_id 不能为空"),
+		})
+		return
+	}
+	videoID, err := parseUint(req.VideoId)
+	if err != nil {
+		c.JSON(consts.StatusBadRequest, &v1.VideoLikeActionResponse{
+			Base: response.ParamError("video_id 格式错误"),
+		})
+		return
+	}
+
+	// 校验 action_type
+	actionType := req.ActionType
+	if actionType != 1 && actionType != 2 {
+		c.JSON(consts.StatusBadRequest, &v1.VideoLikeActionResponse{
+			Base: response.ParamError("action_type 必须为 1（点赞）或 2（取消点赞）"),
+		})
+		return
+	}
+
+	store := dal.GetStore()
+
+	// 检查视频是否存在
+	video, err := db.GetVideoByID(store, videoID)
+	if err != nil {
+		log.Printf("查询视频失败: %v", err)
+		c.JSON(consts.StatusInternalServerError, &v1.VideoLikeActionResponse{
+			Base: response.InternalError(),
+		})
+		return
+	}
+	if video == nil {
+		c.JSON(consts.StatusNotFound, &v1.VideoLikeActionResponse{
+			Base: response.NotFound("视频不存在"),
+		})
+		return
+	}
+
+	// 事务处理点赞/取消点赞
+	var likeDelta int64
+	err = store.WithTx(func(txStore *dal.Store) error {
+		// 查询点赞记录（包含软删除）
+		like, err := db.GetVideoLikeUnscoped(txStore, userID, videoID)
+		if err != nil {
+			return err
+		}
+
+		if actionType == 1 { // 点赞
+			if like == nil {
+				// 不存在，创建新记录
+				newLike := &model.VideoLike{
+					UserID:  userID,
+					VideoID: videoID,
+				}
+				if err := db.CreateVideoLike(txStore, newLike); err != nil {
+					return err
+				}
+				likeDelta = 1
+			} else if like.DeletedAt.Valid {
+				// 已软删除，恢复记录
+				if err := db.RestoreVideoLike(txStore, like.ID); err != nil {
+					return err
+				}
+				likeDelta = 1
+			}
+			// 已点赞则幂等返回，likeDelta = 0
+		} else { // 取消点赞
+			if like != nil && !like.DeletedAt.Valid {
+				// 存在且未删除，软删除
+				if err := db.SoftDeleteVideoLike(txStore, like.ID); err != nil {
+					return err
+				}
+				likeDelta = -1
+			}
+			// 不存在或已删除则幂等返回，likeDelta = 0
+		}
+
+		// 更新视频点赞数
+		if likeDelta != 0 {
+			if err := db.IncreaseVideoLikeCount(txStore, videoID, likeDelta); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+
+	if err != nil {
+		log.Printf("点赞操作失败: %v", err)
+		c.JSON(consts.StatusInternalServerError, &v1.VideoLikeActionResponse{
+			Base: response.InternalError(),
+		})
+		return
+	}
+
+	// 更新 Redis 热榜缓存（失败不阻塞主流程）
+	if likeDelta != 0 {
+		scoreDelta := float64(likeDelta * 3) // 点赞权重为 3
+		if err := store.Redis().ZIncrBy(ctx, hotVideosKey, scoreDelta, fmt.Sprintf("%d", videoID)).Err(); err != nil {
+			log.Printf("更新热榜缓存失败: %v", err)
+		}
+	}
+
+	msg := "点赞成功"
+	if actionType == 2 {
+		msg = "取消点赞成功"
+	}
+	c.JSON(consts.StatusOK, &v1.VideoLikeActionResponse{
+		Base: response.Success(msg),
+	})
 }
 
-// ListLikedVideos .
+// ListLikedVideos 获取用户点赞的视频列表
 // @router /api/v1/interaction/like/list [GET]
 func ListLikedVideos(ctx context.Context, c *app.RequestContext) {
-	var err error
 	var req v1.ListLikedVideosRequest
-	err = c.BindAndValidate(&req)
-	if err != nil {
-		c.String(consts.StatusBadRequest, err.Error())
+	if err := c.BindAndValidate(&req); err != nil {
+		c.JSON(consts.StatusBadRequest, &v1.ListLikedVideosResponse{
+			Base: response.ParamError(err.Error()),
+		})
 		return
 	}
 
-	resp := new(v1.ListLikedVideosResponse)
+	// 校验 user_id
+	if strings.TrimSpace(req.UserId) == "" {
+		c.JSON(consts.StatusBadRequest, &v1.ListLikedVideosResponse{
+			Base: response.ParamError("user_id 不能为空"),
+		})
+		return
+	}
+	userID, err := parseUint(req.UserId)
+	if err != nil {
+		c.JSON(consts.StatusBadRequest, &v1.ListLikedVideosResponse{
+			Base: response.ParamError("user_id 格式错误"),
+		})
+		return
+	}
 
-	c.JSON(consts.StatusOK, resp)
+	_, pageSize, offset := normalizePage(req.PageNum, req.PageSize)
+
+	store := dal.GetStore()
+
+	// 查询点赞记录获取视频 ID 列表
+	videoIDs, total, err := db.ListVideoLikesByUser(store, userID, offset, pageSize)
+	if err != nil {
+		log.Printf("查询点赞列表失败: %v", err)
+		c.JSON(consts.StatusInternalServerError, &v1.ListLikedVideosResponse{
+			Base: response.InternalError(),
+		})
+		return
+	}
+
+	// 批量查询视频详情
+	var items []*v1.Video
+	if len(videoIDs) > 0 {
+		videos, err := db.GetVideosByIDs(store, videoIDs)
+		if err != nil {
+			log.Printf("查询视频详情失败: %v", err)
+			c.JSON(consts.StatusInternalServerError, &v1.ListLikedVideosResponse{
+				Base: response.InternalError(),
+			})
+			return
+		}
+
+		// 按点赞顺序排列
+		videoMap := make(map[uint]model.Video, len(videos))
+		for _, v := range videos {
+			videoMap[v.ID] = v
+		}
+		items = make([]*v1.Video, 0, len(videoIDs))
+		for _, id := range videoIDs {
+			if v, ok := videoMap[id]; ok {
+				items = append(items, modelToProtoVideo(&v))
+			}
+		}
+	}
+
+	c.JSON(consts.StatusOK, &v1.ListLikedVideosResponse{
+		Base: response.Success(),
+		Data: &v1.VideoListWithTotal{
+			Items: items,
+			Total: total,
+		},
+	})
 }
 
-// PublishComment .
+// PublishComment 发布评论
 // @router /api/v1/interaction/comment [POST]
 func PublishComment(ctx context.Context, c *app.RequestContext) {
-	var err error
 	var req v1.PublishCommentRequest
-	err = c.BindAndValidate(&req)
-	if err != nil {
-		c.String(consts.StatusBadRequest, err.Error())
+	if err := c.BindAndValidate(&req); err != nil {
+		c.JSON(consts.StatusBadRequest, &v1.PublishCommentResponse{
+			Base: response.ParamError(err.Error()),
+		})
 		return
 	}
 
-	resp := new(v1.PublishCommentResponse)
+	// 获取当前登录用户
+	userIDValue, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(consts.StatusUnauthorized, &v1.PublishCommentResponse{
+			Base: response.Unauthorized(),
+		})
+		return
+	}
+	userID := userIDValue.(uint)
 
-	c.JSON(consts.StatusOK, resp)
+	// 校验 video_id
+	if strings.TrimSpace(req.VideoId) == "" {
+		c.JSON(consts.StatusBadRequest, &v1.PublishCommentResponse{
+			Base: response.ParamError("video_id 不能为空"),
+		})
+		return
+	}
+	videoID, err := parseUint(req.VideoId)
+	if err != nil {
+		c.JSON(consts.StatusBadRequest, &v1.PublishCommentResponse{
+			Base: response.ParamError("video_id 格式错误"),
+		})
+		return
+	}
+
+	// 校验 content
+	content := strings.TrimSpace(req.Content)
+	if content == "" {
+		c.JSON(consts.StatusBadRequest, &v1.PublishCommentResponse{
+			Base: response.ParamError("评论内容不能为空"),
+		})
+		return
+	}
+	if len(content) > 1000 {
+		c.JSON(consts.StatusBadRequest, &v1.PublishCommentResponse{
+			Base: response.ParamError("评论内容不能超过 1000 字符"),
+		})
+		return
+	}
+
+	store := dal.GetStore()
+
+	// 检查视频是否存在
+	video, err := db.GetVideoByID(store, videoID)
+	if err != nil {
+		log.Printf("查询视频失败: %v", err)
+		c.JSON(consts.StatusInternalServerError, &v1.PublishCommentResponse{
+			Base: response.InternalError(),
+		})
+		return
+	}
+	if video == nil {
+		c.JSON(consts.StatusNotFound, &v1.PublishCommentResponse{
+			Base: response.NotFound("视频不存在"),
+		})
+		return
+	}
+
+	// 事务：创建评论 + 更新视频评论数
+	err = store.WithTx(func(txStore *dal.Store) error {
+		comment := &model.Comment{
+			UserID:  userID,
+			VideoID: videoID,
+			Content: content,
+		}
+		if err := db.CreateComment(txStore, comment); err != nil {
+			return err
+		}
+		return db.IncreaseVideoCommentCount(txStore, videoID, 1)
+	})
+
+	if err != nil {
+		log.Printf("发布评论失败: %v", err)
+		c.JSON(consts.StatusInternalServerError, &v1.PublishCommentResponse{
+			Base: response.InternalError(),
+		})
+		return
+	}
+
+	// 更新 Redis 热榜缓存（评论权重为 2）
+	if err := store.Redis().ZIncrBy(ctx, hotVideosKey, 2.0, fmt.Sprintf("%d", videoID)).Err(); err != nil {
+		log.Printf("更新热榜缓存失败: %v", err)
+	}
+
+	c.JSON(consts.StatusOK, &v1.PublishCommentResponse{
+		Base: response.Success("评论成功"),
+	})
 }
 
-// ListUserComments .
+// ListUserComments 获取用户发表的评论列表
 // @router /api/v1/interaction/comment/list [GET]
 func ListUserComments(ctx context.Context, c *app.RequestContext) {
-	var err error
 	var req v1.ListUserCommentsRequest
-	err = c.BindAndValidate(&req)
-	if err != nil {
-		c.String(consts.StatusBadRequest, err.Error())
+	if err := c.BindAndValidate(&req); err != nil {
+		c.JSON(consts.StatusBadRequest, &v1.ListUserCommentsResponse{
+			Base: response.ParamError(err.Error()),
+		})
 		return
 	}
 
-	resp := new(v1.ListUserCommentsResponse)
+	// 校验 user_id
+	if strings.TrimSpace(req.UserId) == "" {
+		c.JSON(consts.StatusBadRequest, &v1.ListUserCommentsResponse{
+			Base: response.ParamError("user_id 不能为空"),
+		})
+		return
+	}
+	userID, err := parseUint(req.UserId)
+	if err != nil {
+		c.JSON(consts.StatusBadRequest, &v1.ListUserCommentsResponse{
+			Base: response.ParamError("user_id 格式错误"),
+		})
+		return
+	}
 
-	c.JSON(consts.StatusOK, resp)
+	_, pageSize, offset := normalizePage(req.PageNum, req.PageSize)
+
+	store := dal.GetStore()
+
+	comments, total, err := db.ListCommentsByUser(store, userID, offset, pageSize)
+	if err != nil {
+		log.Printf("查询评论列表失败: %v", err)
+		c.JSON(consts.StatusInternalServerError, &v1.ListUserCommentsResponse{
+			Base: response.InternalError(),
+		})
+		return
+	}
+
+	items := make([]*v1.Comment, 0, len(comments))
+	for i := range comments {
+		items = append(items, modelToProtoComment(&comments[i]))
+	}
+
+	c.JSON(consts.StatusOK, &v1.ListUserCommentsResponse{
+		Base: response.Success(),
+		Data: &v1.CommentListWithTotal{
+			Items: items,
+			Total: total,
+		},
+	})
 }
 
-// DeleteComment .
+// DeleteComment 删除评论
 // @router /api/v1/interaction/comment/delete [POST]
 func DeleteComment(ctx context.Context, c *app.RequestContext) {
-	var err error
 	var req v1.DeleteCommentRequest
-	err = c.BindAndValidate(&req)
-	if err != nil {
-		c.String(consts.StatusBadRequest, err.Error())
+	if err := c.BindAndValidate(&req); err != nil {
+		c.JSON(consts.StatusBadRequest, &v1.DeleteCommentResponse{
+			Base: response.ParamError(err.Error()),
+		})
 		return
 	}
 
-	resp := new(v1.DeleteCommentResponse)
+	// 获取当前登录用户
+	userIDValue, exists := c.Get("user_id")
+	if !exists {
+		c.JSON(consts.StatusUnauthorized, &v1.DeleteCommentResponse{
+			Base: response.Unauthorized(),
+		})
+		return
+	}
+	userID := userIDValue.(uint)
 
-	c.JSON(consts.StatusOK, resp)
+	// 校验 comment_id
+	if strings.TrimSpace(req.CommentId) == "" {
+		c.JSON(consts.StatusBadRequest, &v1.DeleteCommentResponse{
+			Base: response.ParamError("comment_id 不能为空"),
+		})
+		return
+	}
+	commentID, err := parseUint(req.CommentId)
+	if err != nil {
+		c.JSON(consts.StatusBadRequest, &v1.DeleteCommentResponse{
+			Base: response.ParamError("comment_id 格式错误"),
+		})
+		return
+	}
+
+	store := dal.GetStore()
+
+	// 查询评论
+	comment, err := db.GetCommentByID(store, commentID)
+	if err != nil {
+		log.Printf("查询评论失败: %v", err)
+		c.JSON(consts.StatusInternalServerError, &v1.DeleteCommentResponse{
+			Base: response.InternalError(),
+		})
+		return
+	}
+	if comment == nil {
+		c.JSON(consts.StatusNotFound, &v1.DeleteCommentResponse{
+			Base: response.NotFound("评论不存在"),
+		})
+		return
+	}
+
+	// 权限校验：只能删除自己的评论
+	if comment.UserID != userID {
+		c.JSON(consts.StatusForbidden, &v1.DeleteCommentResponse{
+			Base: response.Forbidden("无权删除他人评论"),
+		})
+		return
+	}
+
+	videoID := comment.VideoID
+
+	// 事务：软删除评论 + 更新视频评论数
+	err = store.WithTx(func(txStore *dal.Store) error {
+		if err := txStore.DB().Delete(&model.Comment{}, commentID).Error; err != nil {
+			return err
+		}
+		return db.IncreaseVideoCommentCount(txStore, videoID, -1)
+	})
+
+	if err != nil {
+		log.Printf("删除评论失败: %v", err)
+		c.JSON(consts.StatusInternalServerError, &v1.DeleteCommentResponse{
+			Base: response.InternalError(),
+		})
+		return
+	}
+
+	// 更新 Redis 热榜缓存（评论权重为 -2）
+	if err := store.Redis().ZIncrBy(ctx, hotVideosKey, -2.0, fmt.Sprintf("%d", videoID)).Err(); err != nil {
+		log.Printf("更新热榜缓存失败: %v", err)
+	}
+
+	c.JSON(consts.StatusOK, &v1.DeleteCommentResponse{
+		Base: response.Success("删除成功"),
+	})
+}
+
+// modelToProtoComment 将数据库模型转换为 proto 格式
+func modelToProtoComment(c *model.Comment) *v1.Comment {
+	if c == nil {
+		return nil
+	}
+	out := &v1.Comment{
+		Id:         fmt.Sprintf("%d", c.ID),
+		UserId:     fmt.Sprintf("%d", c.UserID),
+		VideoId:    fmt.Sprintf("%d", c.VideoID),
+		LikeCount:  c.LikeCount,
+		ChildCount: c.ChildCount,
+		Content:    c.Content,
+		CreatedAt:  c.CreatedAt.Format("2006-01-02 15:04:05"),
+		UpdatedAt:  c.UpdatedAt.Format("2006-01-02 15:04:05"),
+	}
+	if c.ParentID != nil {
+		out.ParentId = fmt.Sprintf("%d", *c.ParentID)
+	}
+	if c.DeletedAt.Valid {
+		out.DeletedAt = c.DeletedAt.Time.Format("2006-01-02 15:04:05")
+	}
+	return out
+}
+
+// parseUint 从本文件移除重复定义，使用 video_service.go 中的公共函数
+func parseUintLocal(s string) (uint, error) {
+	u64, err := strconv.ParseUint(strings.TrimSpace(s), 10, 64)
+	if err != nil {
+		return 0, err
+	}
+	return uint(u64), nil
 }
