@@ -9,6 +9,21 @@
 | 2025-11-25 | Hertz 框架与 hz 脚手架 | [03-hertz-and-hz.md](./03-hertz-and-hz.md) |
 | 2025-12-07 | Go Context 用法详解 | [04-go-context.md](./04-go-context.md) |
 | 2025-12-15 | 互动模块实现详解 | [05-interaction-module.md](./05-interaction-module.md) |
+| 2025-12-16 | 认证与双 Token 机制 | [06-auth-and-jwt.md](./06-auth-and-jwt.md) |
+
+### 06-auth-and-jwt.md 内容概要
+
+| 章节 | 内容 |
+|------|------|
+| §1 | 问题背景（为何不用 req.UserId） |
+| §2 | 两种获取用户 ID 的方式对比（来源、可信度、使用场景） |
+| §3 | JWT 中间件实现详解（完整流程、核心代码） |
+| §4 | JWT Claims 结构（自定义字段、生成时写入） |
+| §5 | 双 Token 机制（Access/Refresh、有效期、刷新流程） |
+| §6 | Hertz 上下文存取机制（Set/Get、与标准 Context 区别） |
+| §7 | 关键代码位置 |
+| §8 | 最佳实践 |
+| §9 | 推荐阅读 |
 
 ### 05-interaction-module.md 内容概要
 
@@ -54,6 +69,6 @@
 
 ## 待整理主题
 
-- [ ] 认证 & 双 Token (`06-auth-and-jwt.md`)
+- [x] 认证 & 双 Token (`06-auth-and-jwt.md`) ✅ 2025-12-16
 - [ ] Redis / 缓存应用 (`07-redis-cache.md`)
 - [ ] 社交模块 (`08-relation-module.md`)
