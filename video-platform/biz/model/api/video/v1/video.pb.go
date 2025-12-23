@@ -1116,7 +1116,7 @@ var file_api_video_v1_video_proto_rawDesc = []byte{
 	0x66, 0x61, 0x6e, 0x6f, 0x6e, 0x65, 0x2e, 0x61, 0x70, 0x69, 0x2e, 0x76, 0x69, 0x64, 0x65, 0x6f,
 	0x2e, 0x76, 0x31, 0x2e, 0x56, 0x69, 0x64, 0x65, 0x6f, 0x4c, 0x69, 0x73, 0x74, 0x57, 0x69, 0x74,
 	0x68, 0x54, 0x6f, 0x74, 0x61, 0x6c, 0x52, 0x04, 0x64, 0x61, 0x74, 0x61, 0x32, 0xad, 0x05, 0x0a,
-	0x0c, 0x56, 0x69, 0x64, 0x65, 0x6f, 0x53, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x12, 0x7e, 0x0a,
+	0x0c, 0x56, 0x69, 0x64, 0x65, 0x6f, 0x48, 0x61, 0x6e, 0x64, 0x6c, 0x65, 0x72, 0x12, 0x7e, 0x0a,
 	0x0c, 0x50, 0x75, 0x62, 0x6c, 0x69, 0x73, 0x68, 0x56, 0x69, 0x64, 0x65, 0x6f, 0x12, 0x28, 0x2e,
 	0x66, 0x61, 0x6e, 0x6f, 0x6e, 0x65, 0x2e, 0x61, 0x70, 0x69, 0x2e, 0x76, 0x69, 0x64, 0x65, 0x6f,
 	0x2e, 0x76, 0x31, 0x2e, 0x50, 0x75, 0x62, 0x6c, 0x69, 0x73, 0x68, 0x56, 0x69, 0x64, 0x65, 0x6f,
@@ -1206,16 +1206,16 @@ var file_api_video_v1_video_proto_depIdxs = []int32{
 	11, // 8: fanone.api.video.v1.VideoCommentList.items:type_name -> fanone.api.video.v1.VideoComment
 	14, // 9: fanone.api.video.v1.GetHotVideosResponse.base:type_name -> fanone.api.video.v1.BaseResponse
 	1,  // 10: fanone.api.video.v1.GetHotVideosResponse.data:type_name -> fanone.api.video.v1.VideoListWithTotal
-	2,  // 11: fanone.api.video.v1.VideoService.PublishVideo:input_type -> fanone.api.video.v1.PublishVideoRequest
-	4,  // 12: fanone.api.video.v1.VideoService.ListPublishedVideos:input_type -> fanone.api.video.v1.ListPublishedVideosRequest
-	6,  // 13: fanone.api.video.v1.VideoService.SearchVideos:input_type -> fanone.api.video.v1.SearchVideosRequest
-	8,  // 14: fanone.api.video.v1.VideoService.ListVideoComments:input_type -> fanone.api.video.v1.ListVideoCommentsRequest
-	12, // 15: fanone.api.video.v1.VideoService.GetHotVideos:input_type -> fanone.api.video.v1.GetHotVideosRequest
-	3,  // 16: fanone.api.video.v1.VideoService.PublishVideo:output_type -> fanone.api.video.v1.PublishVideoResponse
-	5,  // 17: fanone.api.video.v1.VideoService.ListPublishedVideos:output_type -> fanone.api.video.v1.ListPublishedVideosResponse
-	7,  // 18: fanone.api.video.v1.VideoService.SearchVideos:output_type -> fanone.api.video.v1.SearchVideosResponse
-	9,  // 19: fanone.api.video.v1.VideoService.ListVideoComments:output_type -> fanone.api.video.v1.ListVideoCommentsResponse
-	13, // 20: fanone.api.video.v1.VideoService.GetHotVideos:output_type -> fanone.api.video.v1.GetHotVideosResponse
+	2,  // 11: fanone.api.video.v1.VideoHandler.PublishVideo:input_type -> fanone.api.video.v1.PublishVideoRequest
+	4,  // 12: fanone.api.video.v1.VideoHandler.ListPublishedVideos:input_type -> fanone.api.video.v1.ListPublishedVideosRequest
+	6,  // 13: fanone.api.video.v1.VideoHandler.SearchVideos:input_type -> fanone.api.video.v1.SearchVideosRequest
+	8,  // 14: fanone.api.video.v1.VideoHandler.ListVideoComments:input_type -> fanone.api.video.v1.ListVideoCommentsRequest
+	12, // 15: fanone.api.video.v1.VideoHandler.GetHotVideos:input_type -> fanone.api.video.v1.GetHotVideosRequest
+	3,  // 16: fanone.api.video.v1.VideoHandler.PublishVideo:output_type -> fanone.api.video.v1.PublishVideoResponse
+	5,  // 17: fanone.api.video.v1.VideoHandler.ListPublishedVideos:output_type -> fanone.api.video.v1.ListPublishedVideosResponse
+	7,  // 18: fanone.api.video.v1.VideoHandler.SearchVideos:output_type -> fanone.api.video.v1.SearchVideosResponse
+	9,  // 19: fanone.api.video.v1.VideoHandler.ListVideoComments:output_type -> fanone.api.video.v1.ListVideoCommentsResponse
+	13, // 20: fanone.api.video.v1.VideoHandler.GetHotVideos:output_type -> fanone.api.video.v1.GetHotVideosResponse
 	16, // [16:21] is the sub-list for method output_type
 	11, // [11:16] is the sub-list for method input_type
 	11, // [11:11] is the sub-list for extension type_name

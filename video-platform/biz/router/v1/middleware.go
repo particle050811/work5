@@ -3,8 +3,6 @@
 package v1
 
 import (
-	"video-platform/pkg/middleware"
-
 	"github.com/cloudwego/hertz/pkg/app"
 )
 
@@ -29,27 +27,27 @@ func _userMw() []app.HandlerFunc {
 }
 
 func _uploadavatarMw() []app.HandlerFunc {
-	// 上传头像需要认证
-	return []app.HandlerFunc{middleware.AuthMiddleware()}
+	// your code...
+	return nil
 }
 
 func _getuserinfoMw() []app.HandlerFunc {
-	// 获取用户信息不需要认证
+	// your code...
 	return nil
 }
 
 func _loginMw() []app.HandlerFunc {
-	// 登录不需要认证
+	// your code...
 	return nil
 }
 
 func _refreshtokenMw() []app.HandlerFunc {
-	// 刷新令牌不需要认证
+	// your code...
 	return nil
 }
 
 func _registerMw() []app.HandlerFunc {
-	// 注册不需要认证
+	// your code...
 	return nil
 }
 
@@ -74,8 +72,8 @@ func _listpublishedvideosMw() []app.HandlerFunc {
 }
 
 func _publishvideoMw() []app.HandlerFunc {
-	// 投稿需要认证
-	return []app.HandlerFunc{middleware.AuthMiddleware()}
+	// your code...
+	return nil
 }
 
 func _searchvideosMw() []app.HandlerFunc {
@@ -94,13 +92,13 @@ func _commentMw() []app.HandlerFunc {
 }
 
 func _publishcommentMw() []app.HandlerFunc {
-	// 发布评论需要认证
-	return []app.HandlerFunc{middleware.AuthMiddleware()}
+	// your code...
+	return nil
 }
 
 func _deletecommentMw() []app.HandlerFunc {
-	// 删除评论需要认证
-	return []app.HandlerFunc{middleware.AuthMiddleware()}
+	// your code...
+	return nil
 }
 
 func _listusercommentsMw() []app.HandlerFunc {
@@ -114,8 +112,8 @@ func _likeMw() []app.HandlerFunc {
 }
 
 func _videolikeactionMw() []app.HandlerFunc {
-	// 点赞操作需要认证
-	return []app.HandlerFunc{middleware.AuthMiddleware()}
+	// your code...
+	return nil
 }
 
 func _listlikedvideosMw() []app.HandlerFunc {
@@ -129,8 +127,8 @@ func _relationMw() []app.HandlerFunc {
 }
 
 func _relationactionMw() []app.HandlerFunc {
-	// 关注/取关操作需要认证
-	return []app.HandlerFunc{middleware.AuthMiddleware()}
+	// your code...
+	return nil
 }
 
 func _followerMw() []app.HandlerFunc {

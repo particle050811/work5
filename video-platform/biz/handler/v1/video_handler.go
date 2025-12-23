@@ -38,7 +38,7 @@ func PublishVideo(ctx context.Context, c *app.RequestContext) {
 	fileHeader, err := c.FormFile("video")
 	if err != nil {
 		c.JSON(consts.StatusBadRequest, &v1.PublishVideoResponse{
-			Base: response.ParamError("请上传视频文件，字段名为 video"),
+			Base: response.ParamError("请上传视频文件,字段名为 video"),
 		})
 		return
 	}

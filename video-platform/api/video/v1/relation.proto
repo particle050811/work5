@@ -79,9 +79,9 @@ message ListFriendsResponse {
   SocialListWithTotal data = 2;
 }
 
-// ---------- Service 定义 ----------
+// ---------- Handler 定义 ----------
 
-service RelationService {
+service RelationHandler {
   rpc RelationAction(RelationActionRequest) returns (RelationActionResponse) {
     option (.api.post) = "/api/v1/relation/action";
   }

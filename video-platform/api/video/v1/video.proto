@@ -108,9 +108,9 @@ message GetHotVideosResponse {
   VideoListWithTotal data = 2;
 }
 
-// ---------- Service 定义 ----------
+// ---------- Handler 定义 ----------
 
-service VideoService {
+service VideoHandler {
   rpc PublishVideo(PublishVideoRequest) returns (PublishVideoResponse) {
     option (.api.post) = "/api/v1/video/publish";
   }

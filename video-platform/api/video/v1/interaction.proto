@@ -95,9 +95,9 @@ message DeleteCommentResponse {
   BaseResponse base = 1;
 }
 
-// ---------- Service 定义 ----------
+// ---------- Handler 定义 ----------
 
-service InteractionService {
+service InteractionHandler {
   // 视频点赞（未来扩展：CommentLikeAction）
   rpc VideoLikeAction(VideoLikeActionRequest) returns (VideoLikeActionResponse) {
     option (.api.post) = "/api/v1/interaction/like";

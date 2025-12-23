@@ -743,7 +743,7 @@ var file_relation_proto_rawDesc = []byte{
 	0x4c, 0x4f, 0x57, 0x10, 0x01, 0x12, 0x21, 0x0a, 0x1d, 0x52, 0x45, 0x4c, 0x41, 0x54, 0x49, 0x4f,
 	0x4e, 0x5f, 0x41, 0x43, 0x54, 0x49, 0x4f, 0x4e, 0x5f, 0x54, 0x59, 0x50, 0x45, 0x5f, 0x55, 0x4e,
 	0x46, 0x4f, 0x4c, 0x4c, 0x4f, 0x57, 0x10, 0x02, 0x32, 0xbd, 0x04, 0x0a, 0x0f, 0x52, 0x65, 0x6c,
-	0x61, 0x74, 0x69, 0x6f, 0x6e, 0x53, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x12, 0x86, 0x01, 0x0a,
+	0x61, 0x74, 0x69, 0x6f, 0x6e, 0x48, 0x61, 0x6e, 0x64, 0x6c, 0x65, 0x72, 0x12, 0x86, 0x01, 0x0a,
 	0x0e, 0x52, 0x65, 0x6c, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x41, 0x63, 0x74, 0x69, 0x6f, 0x6e, 0x12,
 	0x2a, 0x2e, 0x66, 0x61, 0x6e, 0x6f, 0x6e, 0x65, 0x2e, 0x61, 0x70, 0x69, 0x2e, 0x76, 0x69, 0x64,
 	0x65, 0x6f, 0x2e, 0x76, 0x31, 0x2e, 0x52, 0x65, 0x6c, 0x61, 0x74, 0x69, 0x6f, 0x6e, 0x41, 0x63,
@@ -821,14 +821,14 @@ var file_relation_proto_depIdxs = []int32{
 	2,  // 5: fanone.api.video.v1.ListFollowersResponse.data:type_name -> fanone.api.video.v1.SocialListWithTotal
 	11, // 6: fanone.api.video.v1.ListFriendsResponse.base:type_name -> fanone.api.video.v1.BaseResponse
 	2,  // 7: fanone.api.video.v1.ListFriendsResponse.data:type_name -> fanone.api.video.v1.SocialListWithTotal
-	3,  // 8: fanone.api.video.v1.RelationService.RelationAction:input_type -> fanone.api.video.v1.RelationActionRequest
-	5,  // 9: fanone.api.video.v1.RelationService.ListFollowings:input_type -> fanone.api.video.v1.ListFollowingsRequest
-	7,  // 10: fanone.api.video.v1.RelationService.ListFollowers:input_type -> fanone.api.video.v1.ListFollowersRequest
-	9,  // 11: fanone.api.video.v1.RelationService.ListFriends:input_type -> fanone.api.video.v1.ListFriendsRequest
-	4,  // 12: fanone.api.video.v1.RelationService.RelationAction:output_type -> fanone.api.video.v1.RelationActionResponse
-	6,  // 13: fanone.api.video.v1.RelationService.ListFollowings:output_type -> fanone.api.video.v1.ListFollowingsResponse
-	8,  // 14: fanone.api.video.v1.RelationService.ListFollowers:output_type -> fanone.api.video.v1.ListFollowersResponse
-	10, // 15: fanone.api.video.v1.RelationService.ListFriends:output_type -> fanone.api.video.v1.ListFriendsResponse
+	3,  // 8: fanone.api.video.v1.RelationHandler.RelationAction:input_type -> fanone.api.video.v1.RelationActionRequest
+	5,  // 9: fanone.api.video.v1.RelationHandler.ListFollowings:input_type -> fanone.api.video.v1.ListFollowingsRequest
+	7,  // 10: fanone.api.video.v1.RelationHandler.ListFollowers:input_type -> fanone.api.video.v1.ListFollowersRequest
+	9,  // 11: fanone.api.video.v1.RelationHandler.ListFriends:input_type -> fanone.api.video.v1.ListFriendsRequest
+	4,  // 12: fanone.api.video.v1.RelationHandler.RelationAction:output_type -> fanone.api.video.v1.RelationActionResponse
+	6,  // 13: fanone.api.video.v1.RelationHandler.ListFollowings:output_type -> fanone.api.video.v1.ListFollowingsResponse
+	8,  // 14: fanone.api.video.v1.RelationHandler.ListFollowers:output_type -> fanone.api.video.v1.ListFollowersResponse
+	10, // 15: fanone.api.video.v1.RelationHandler.ListFriends:output_type -> fanone.api.video.v1.ListFriendsResponse
 	12, // [12:16] is the sub-list for method output_type
 	8,  // [8:12] is the sub-list for method input_type
 	8,  // [8:8] is the sub-list for extension type_name

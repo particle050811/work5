@@ -731,7 +731,7 @@ var file_user_proto_rawDesc = []byte{
 	0x61, 0x63, 0x63, 0x65, 0x73, 0x73, 0x54, 0x6f, 0x6b, 0x65, 0x6e, 0x12, 0x23, 0x0a, 0x0d, 0x72,
 	0x65, 0x66, 0x72, 0x65, 0x73, 0x68, 0x5f, 0x74, 0x6f, 0x6b, 0x65, 0x6e, 0x18, 0x03, 0x20, 0x01,
 	0x28, 0x09, 0x52, 0x0c, 0x72, 0x65, 0x66, 0x72, 0x65, 0x73, 0x68, 0x54, 0x6f, 0x6b, 0x65, 0x6e,
-	0x32, 0xdf, 0x04, 0x0a, 0x0b, 0x55, 0x73, 0x65, 0x72, 0x53, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65,
+	0x32, 0xdf, 0x04, 0x0a, 0x0b, 0x55, 0x73, 0x65, 0x72, 0x48, 0x61, 0x6e, 0x64, 0x6c, 0x65, 0x72,
 	0x12, 0x72, 0x0a, 0x08, 0x52, 0x65, 0x67, 0x69, 0x73, 0x74, 0x65, 0x72, 0x12, 0x24, 0x2e, 0x66,
 	0x61, 0x6e, 0x6f, 0x6e, 0x65, 0x2e, 0x61, 0x70, 0x69, 0x2e, 0x76, 0x69, 0x64, 0x65, 0x6f, 0x2e,
 	0x76, 0x31, 0x2e, 0x52, 0x65, 0x67, 0x69, 0x73, 0x74, 0x65, 0x72, 0x52, 0x65, 0x71, 0x75, 0x65,
@@ -811,16 +811,16 @@ var file_user_proto_depIdxs = []int32{
 	11, // 5: fanone.api.video.v1.UploadAvatarResponse.base:type_name -> fanone.api.video.v1.BaseResponse
 	0,  // 6: fanone.api.video.v1.UploadAvatarResponse.data:type_name -> fanone.api.video.v1.User
 	11, // 7: fanone.api.video.v1.RefreshTokenResponse.base:type_name -> fanone.api.video.v1.BaseResponse
-	1,  // 8: fanone.api.video.v1.UserService.Register:input_type -> fanone.api.video.v1.RegisterRequest
-	3,  // 9: fanone.api.video.v1.UserService.Login:input_type -> fanone.api.video.v1.LoginRequest
-	9,  // 10: fanone.api.video.v1.UserService.RefreshToken:input_type -> fanone.api.video.v1.RefreshTokenRequest
-	5,  // 11: fanone.api.video.v1.UserService.GetUserInfo:input_type -> fanone.api.video.v1.GetUserInfoRequest
-	7,  // 12: fanone.api.video.v1.UserService.UploadAvatar:input_type -> fanone.api.video.v1.UploadAvatarRequest
-	2,  // 13: fanone.api.video.v1.UserService.Register:output_type -> fanone.api.video.v1.RegisterResponse
-	4,  // 14: fanone.api.video.v1.UserService.Login:output_type -> fanone.api.video.v1.LoginResponse
-	10, // 15: fanone.api.video.v1.UserService.RefreshToken:output_type -> fanone.api.video.v1.RefreshTokenResponse
-	6,  // 16: fanone.api.video.v1.UserService.GetUserInfo:output_type -> fanone.api.video.v1.GetUserInfoResponse
-	8,  // 17: fanone.api.video.v1.UserService.UploadAvatar:output_type -> fanone.api.video.v1.UploadAvatarResponse
+	1,  // 8: fanone.api.video.v1.UserHandler.Register:input_type -> fanone.api.video.v1.RegisterRequest
+	3,  // 9: fanone.api.video.v1.UserHandler.Login:input_type -> fanone.api.video.v1.LoginRequest
+	9,  // 10: fanone.api.video.v1.UserHandler.RefreshToken:input_type -> fanone.api.video.v1.RefreshTokenRequest
+	5,  // 11: fanone.api.video.v1.UserHandler.GetUserInfo:input_type -> fanone.api.video.v1.GetUserInfoRequest
+	7,  // 12: fanone.api.video.v1.UserHandler.UploadAvatar:input_type -> fanone.api.video.v1.UploadAvatarRequest
+	2,  // 13: fanone.api.video.v1.UserHandler.Register:output_type -> fanone.api.video.v1.RegisterResponse
+	4,  // 14: fanone.api.video.v1.UserHandler.Login:output_type -> fanone.api.video.v1.LoginResponse
+	10, // 15: fanone.api.video.v1.UserHandler.RefreshToken:output_type -> fanone.api.video.v1.RefreshTokenResponse
+	6,  // 16: fanone.api.video.v1.UserHandler.GetUserInfo:output_type -> fanone.api.video.v1.GetUserInfoResponse
+	8,  // 17: fanone.api.video.v1.UserHandler.UploadAvatar:output_type -> fanone.api.video.v1.UploadAvatarResponse
 	13, // [13:18] is the sub-list for method output_type
 	8,  // [8:13] is the sub-list for method input_type
 	8,  // [8:8] is the sub-list for extension type_name

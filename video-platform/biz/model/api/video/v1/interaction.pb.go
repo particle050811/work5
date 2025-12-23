@@ -903,7 +903,7 @@ var file_interaction_proto_rawDesc = []byte{
 	0x44, 0x44, 0x10, 0x01, 0x12, 0x1b, 0x0a, 0x17, 0x4c, 0x49, 0x4b, 0x45, 0x5f, 0x41, 0x43, 0x54,
 	0x49, 0x4f, 0x4e, 0x5f, 0x54, 0x59, 0x50, 0x45, 0x5f, 0x43, 0x41, 0x4e, 0x43, 0x45, 0x4c, 0x10,
 	0x02, 0x32, 0xe9, 0x05, 0x0a, 0x12, 0x49, 0x6e, 0x74, 0x65, 0x72, 0x61, 0x63, 0x74, 0x69, 0x6f,
-	0x6e, 0x53, 0x65, 0x72, 0x76, 0x69, 0x63, 0x65, 0x12, 0x8a, 0x01, 0x0a, 0x0f, 0x56, 0x69, 0x64,
+	0x6e, 0x48, 0x61, 0x6e, 0x64, 0x6c, 0x65, 0x72, 0x12, 0x8a, 0x01, 0x0a, 0x0f, 0x56, 0x69, 0x64,
 	0x65, 0x6f, 0x4c, 0x69, 0x6b, 0x65, 0x41, 0x63, 0x74, 0x69, 0x6f, 0x6e, 0x12, 0x2b, 0x2e, 0x66,
 	0x61, 0x6e, 0x6f, 0x6e, 0x65, 0x2e, 0x61, 0x70, 0x69, 0x2e, 0x76, 0x69, 0x64, 0x65, 0x6f, 0x2e,
 	0x76, 0x31, 0x2e, 0x56, 0x69, 0x64, 0x65, 0x6f, 0x4c, 0x69, 0x6b, 0x65, 0x41, 0x63, 0x74, 0x69,
@@ -994,16 +994,16 @@ var file_interaction_proto_depIdxs = []int32{
 	13, // 5: fanone.api.video.v1.ListUserCommentsResponse.base:type_name -> fanone.api.video.v1.BaseResponse
 	2,  // 6: fanone.api.video.v1.ListUserCommentsResponse.data:type_name -> fanone.api.video.v1.CommentListWithTotal
 	13, // 7: fanone.api.video.v1.DeleteCommentResponse.base:type_name -> fanone.api.video.v1.BaseResponse
-	3,  // 8: fanone.api.video.v1.InteractionService.VideoLikeAction:input_type -> fanone.api.video.v1.VideoLikeActionRequest
-	5,  // 9: fanone.api.video.v1.InteractionService.ListLikedVideos:input_type -> fanone.api.video.v1.ListLikedVideosRequest
-	7,  // 10: fanone.api.video.v1.InteractionService.PublishComment:input_type -> fanone.api.video.v1.PublishCommentRequest
-	9,  // 11: fanone.api.video.v1.InteractionService.ListUserComments:input_type -> fanone.api.video.v1.ListUserCommentsRequest
-	11, // 12: fanone.api.video.v1.InteractionService.DeleteComment:input_type -> fanone.api.video.v1.DeleteCommentRequest
-	4,  // 13: fanone.api.video.v1.InteractionService.VideoLikeAction:output_type -> fanone.api.video.v1.VideoLikeActionResponse
-	6,  // 14: fanone.api.video.v1.InteractionService.ListLikedVideos:output_type -> fanone.api.video.v1.ListLikedVideosResponse
-	8,  // 15: fanone.api.video.v1.InteractionService.PublishComment:output_type -> fanone.api.video.v1.PublishCommentResponse
-	10, // 16: fanone.api.video.v1.InteractionService.ListUserComments:output_type -> fanone.api.video.v1.ListUserCommentsResponse
-	12, // 17: fanone.api.video.v1.InteractionService.DeleteComment:output_type -> fanone.api.video.v1.DeleteCommentResponse
+	3,  // 8: fanone.api.video.v1.InteractionHandler.VideoLikeAction:input_type -> fanone.api.video.v1.VideoLikeActionRequest
+	5,  // 9: fanone.api.video.v1.InteractionHandler.ListLikedVideos:input_type -> fanone.api.video.v1.ListLikedVideosRequest
+	7,  // 10: fanone.api.video.v1.InteractionHandler.PublishComment:input_type -> fanone.api.video.v1.PublishCommentRequest
+	9,  // 11: fanone.api.video.v1.InteractionHandler.ListUserComments:input_type -> fanone.api.video.v1.ListUserCommentsRequest
+	11, // 12: fanone.api.video.v1.InteractionHandler.DeleteComment:input_type -> fanone.api.video.v1.DeleteCommentRequest
+	4,  // 13: fanone.api.video.v1.InteractionHandler.VideoLikeAction:output_type -> fanone.api.video.v1.VideoLikeActionResponse
+	6,  // 14: fanone.api.video.v1.InteractionHandler.ListLikedVideos:output_type -> fanone.api.video.v1.ListLikedVideosResponse
+	8,  // 15: fanone.api.video.v1.InteractionHandler.PublishComment:output_type -> fanone.api.video.v1.PublishCommentResponse
+	10, // 16: fanone.api.video.v1.InteractionHandler.ListUserComments:output_type -> fanone.api.video.v1.ListUserCommentsResponse
+	12, // 17: fanone.api.video.v1.InteractionHandler.DeleteComment:output_type -> fanone.api.video.v1.DeleteCommentResponse
 	13, // [13:18] is the sub-list for method output_type
 	8,  // [8:13] is the sub-list for method input_type
 	8,  // [8:8] is the sub-list for extension type_name
