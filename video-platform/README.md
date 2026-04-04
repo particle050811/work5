@@ -1,5 +1,68 @@
 # FanOne 视频平台
 
+## 项目结构与职责
+
+### 目录结构图
+
+```text
+video-platform/
+├── main.go                    # 服务入口
+├── router.go                  # 自定义路由扩展
+├── router_gen.go              # Hertz 生成路由入口
+├── api.proto                  # HTTP 注解定义
+├── api/video/v1/              # Protobuf 接口定义
+│   ├── common.proto
+│   ├── user.proto
+│   ├── video.proto
+│   ├── interaction.proto
+│   └── relation.proto
+├── biz/
+│   ├── router/                # 路由注册与中间件挂载
+│   ├── handler/               # HTTP 入参解析、鉴权上下文读取、响应封装
+│   ├── service/               # 业务编排、权限校验、分页与事务逻辑
+│   ├── dal/                   # 数据访问层，统一管理 DB / Redis / DAO / Model
+│   └── model/api/             # Protobuf 生成的 Go 代码
+├── pkg/
+│   ├── auth/                  # JWT 双 Token、密码哈希
+│   ├── middleware/            # 通用中间件
+│   ├── response/              # 统一响应工具
+│   ├── storage/               # 静态资源访问辅助
+│   └── util/                  # 通用工具函数
+├── storage/
+│   ├── avatars/               # 用户头像上传目录
+│   └── videos/                # 视频文件上传目录
+├── swagger/
+│   ├── user/
+│   ├── video/
+│   ├── interaction/
+│   └── relation/
+├── docs/                      # 文档补充目录
+├── conf/                      # 配置相关文件
+├── script/                    # 启动/初始化脚本
+├── Dockerfile
+└── README.md
+```
+
+### 分层职责
+
+- `router`：注册各模块路由，挂载认证和其他中间件，控制接口暴露边界。
+- `handler`：接收 HTTP 请求，绑定参数，读取上下文中的用户身份，调用 service，并返回统一响应。
+- `service`：承接核心业务逻辑，包括权限校验、事务控制、分页处理、幂等判断和缓存更新。
+- `dal`：负责数据库与 Redis 访问，包括模型定义、DAO 查询、缓存读写和底层存储初始化。
+
+### 存储目录说明
+
+- `storage/avatars/`：保存用户头像文件。
+- `storage/videos/`：保存投稿视频文件。
+- Docker 启动时建议挂载整个 `storage/` 目录，避免容器重建后上传文件丢失。
+
+### Swagger 路径
+
+- 用户模块：`http://localhost:8888/swagger/user/index.html`
+- 视频模块：`http://localhost:8888/swagger/video/index.html`
+- 互动模块：`http://localhost:8888/swagger/interaction/index.html`
+- 社交模块：`http://localhost:8888/swagger/relation/index.html`
+
 ## 本地启动
 
 1. 复制环境变量文件：
@@ -40,63 +103,26 @@ docker build -t fanone-video:latest .
 
 ### 2. 运行容器
 
-推荐在交付文档里至少保留一个“可直接复制”的启动示例。对于只提交 `.env.example`、不提交真实 `.env` 的场景，建议直接通过系统环境变量启动：
-
 ```bash
-docker run --rm \
+docker run -d \
   --name fanone-video \
-  -e DB_DSN='root:123456@tcp(172.17.0.1:3306)/fanone?charset=utf8mb4&parseTime=True&loc=Local' \
-  -e REDIS_ADDR='172.17.0.1:6379' \
+  --restart unless-stopped \
+  --network host \
+  -e DB_DSN='root:hsr123456@tcp(127.0.0.1:3306)/fanone?charset=utf8mb4&parseTime=True&loc=Local' \
+  -e REDIS_ADDR='127.0.0.1:6379' \
   -e REDIS_PASSWORD='' \
   -e REDIS_DB='0' \
   -e JWT_SECRET='fanone-video-platform-secret-key-2024' \
   -e SERVER_PORT='8888' \
-  -p 8888:8888 \
-  -v "$(pwd)/storage:/app/storage" \
-  fanone-video:latest
+  -v /home/particle/2025-2/west2onlie_GoWeb/work4/video-platform/storage:/app/storage \
+  particle050811/fanone-video:latest
 ```
 
-上面命令中的 `172.17.0.1` 只是示例，实际应替换为容器可访问的 MySQL / Redis 地址。
+该命令为本地测试示例，使用宿主机网络，适用于本机 MySQL 和 Redis 运行在 `127.0.0.1` 的场景。镜像名使用当前仓库工作流推送到 Docker Hub 的 `particle050811/fanone-video:latest`。
 
-如果你本地已经准备好了未提交到仓库的 `.env` 文件，也可以使用 `--env-file` 方式运行。
+本地测试时挂载 `storage` 目录，便于直接查看上传文件；实际服务器部署如果不需要保留宿主机侧文件，可删除 `-v /home/particle/2025-2/west2onlie_GoWeb/work4/video-platform/storage:/app/storage` 这一行，直接运行容器。
 
-如果本机 MySQL 和 Redis 跑在宿主机上，Linux 建议直接使用宿主机网络：
-
-```bash
-docker run --rm \
-  --name fanone-video \
-  --network host \
-  --env-file .env \
-  -v "$(pwd)/storage:/app/storage" \
-  fanone-video:latest
-```
-
-如果你不使用 `--network host`，则要把 `.env` 里的 `DB_DSN`、`REDIS_ADDR` 改成容器可访问的地址，例如宿主机 IP 或 Docker 网络内服务名。
-
-常见做法：
-
-- MySQL 容器名为 `mysql`
-- Redis 容器名为 `redis`
-- 则 `DB_DSN` 可写为 `root:123456@tcp(mysql:3306)/fanone?charset=utf8mb4&parseTime=True&loc=Local`
-- `REDIS_ADDR` 可写为 `redis:6379`
-
-### 3. 端口映射运行
-
-如果你希望显式映射端口，可这样运行：
-
-```bash
-docker run --rm \
-  --name fanone-video \
-  --env-file .env \
-  -e SERVER_PORT=8888 \
-  -p 8888:8888 \
-  -v "$(pwd)/storage:/app/storage" \
-  fanone-video:latest
-```
-
-此模式要求容器里的数据库和 Redis 地址可达。
-
-### 4. 验证服务
+### 3. 验证服务
 
 启动后可以检查：
 

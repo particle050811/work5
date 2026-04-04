@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/redis/go-redis/v9"
@@ -12,9 +13,10 @@ import (
 
 // initRedis 初始化 Redis 客户端
 func initRedis() *redis.Client {
-	addr := os.Getenv("REDIS_ADDR")
+	addr := strings.TrimSpace(os.Getenv("REDIS_ADDR"))
 	if addr == "" {
-		log.Fatal("[Redis] REDIS_ADDR 未配置，服务启动失败")
+		log.Printf("[Redis] REDIS_ADDR 未配置，Redis 缓存降级为直连数据库")
+		return nil
 	}
 
 	password := os.Getenv("REDIS_PASSWORD")
@@ -23,6 +25,8 @@ func initRedis() *redis.Client {
 	if dbStr != "" {
 		if parsed, err := strconv.Atoi(dbStr); err == nil {
 			db = parsed
+		} else {
+			log.Printf("[Redis] REDIS_DB=%q 非法，回退使用默认 DB 0", dbStr)
 		}
 	}
 
@@ -37,7 +41,9 @@ func initRedis() *redis.Client {
 	defer cancel()
 
 	if err := client.Ping(ctx).Err(); err != nil {
-		log.Fatalf("[Redis] 连接失败: %v", err)
+		log.Printf("[Redis] 连接失败，Redis 缓存降级为直连数据库 addr=%s: %v", addr, err)
+		_ = client.Close()
+		return nil
 	}
 
 	log.Printf("[Redis] 连接成功: %s", addr)

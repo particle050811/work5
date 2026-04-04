@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -119,9 +120,9 @@ func resetTestEnvironment() error {
 }
 
 func clearRedisCache() error {
-	addr, err := getConfigValue("REDIS_ADDR")
-	if err != nil {
-		return err
+	addr, ok := getConfigValueOptional("REDIS_ADDR")
+	if !ok || strings.TrimSpace(addr) == "" {
+		return nil
 	}
 
 	password, _ := getConfigValueOptional("REDIS_PASSWORD")
@@ -142,7 +143,93 @@ func clearRedisCache() error {
 	defer cancel()
 
 	if err := cli.Del(ctx, hotVideosKey).Err(); err != nil {
-		return fmt.Errorf("清理 Redis 热榜缓存失败: %w", err)
+		return fmt.Errorf("清理 Redis 热榜缓存失败 addr=%s: %w", addr, err)
+	}
+	return nil
+}
+
+func hotCacheAvailable() bool {
+	addr, ok := getConfigValueOptional("REDIS_ADDR")
+	return ok && strings.TrimSpace(addr) != ""
+}
+
+func hotCacheExists() (bool, error) {
+	addr, ok := getConfigValueOptional("REDIS_ADDR")
+	if !ok || strings.TrimSpace(addr) == "" {
+		return false, nil
+	}
+
+	password, _ := getConfigValueOptional("REDIS_PASSWORD")
+	dbStr, _ := getConfigValueOptional("REDIS_DB")
+	dbIndex := 0
+	if strings.TrimSpace(dbStr) != "" {
+		fmt.Sscanf(dbStr, "%d", &dbIndex)
+	}
+
+	cli := redis.NewClient(&redis.Options{
+		Addr:     addr,
+		Password: password,
+		DB:       dbIndex,
+	})
+	defer cli.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	n, err := cli.Exists(ctx, hotVideosKey).Result()
+	if err != nil {
+		return false, fmt.Errorf("查询 Redis 热榜缓存失败 addr=%s: %w", addr, err)
+	}
+	return n > 0, nil
+}
+
+func prepareNamedVideoFile(prefix string) (string, func(), error) {
+	f, err := os.CreateTemp("", prefix+"-*.mp4")
+	if err != nil {
+		return "", nil, fmt.Errorf("创建临时视频文件失败: %w", err)
+	}
+
+	content := []byte("fanone-test-video")
+	if _, err := f.Write(content); err != nil {
+		_ = f.Close()
+		_ = os.Remove(f.Name())
+		return "", nil, fmt.Errorf("写入临时视频文件失败: %w", err)
+	}
+	if err := f.Close(); err != nil {
+		_ = os.Remove(f.Name())
+		return "", nil, fmt.Errorf("关闭临时视频文件失败: %w", err)
+	}
+
+	finalPath := f.Name()
+	if ext := filepath.Ext(finalPath); ext == "" {
+		targetPath := finalPath + ".mp4"
+		if err := os.Rename(finalPath, targetPath); err != nil {
+			_ = os.Remove(finalPath)
+			return "", nil, fmt.Errorf("重命名临时视频文件失败: %w", err)
+		}
+		finalPath = targetPath
+	}
+
+	cleanup := func() {
+		_ = os.Remove(finalPath)
+	}
+	return finalPath, cleanup, nil
+}
+
+func setVideoVisitCount(videoID string, visitCount int64) error {
+	dsn, err := getConfigValue("DB_DSN")
+	if err != nil {
+		return err
+	}
+
+	db, err := sql.Open("mysql", dsn)
+	if err != nil {
+		return fmt.Errorf("连接测试数据库失败: %w", err)
+	}
+	defer db.Close()
+
+	if _, err := db.Exec("UPDATE videos SET visit_count = ? WHERE id = ?", visitCount, videoID); err != nil {
+		return fmt.Errorf("更新视频 visit_count 失败 video_id=%s: %w", videoID, err)
 	}
 	return nil
 }
@@ -162,17 +249,15 @@ func prepareRelationFixture(client *http.Client, baseURL string) (*RelationFixtu
 		users[i] = *seedUser
 	}
 
-	// 首次准备社交测试数据时，可临时打开下面这段关注逻辑，插入一次后再继续保持注释状态。
-	//
-	// if err := ensureFollowRelation(client, baseURL, users[0].AccessToken, users[1].UserID, "Alice 关注 Bob"); err != nil {
-	// 	return nil, err
-	// }
-	// if err := ensureFollowRelation(client, baseURL, users[1].AccessToken, users[0].UserID, "Bob 关注 Alice"); err != nil {
-	// 	return nil, err
-	// }
-	// if err := ensureFollowRelation(client, baseURL, users[0].AccessToken, users[2].UserID, "Alice 关注 Carol"); err != nil {
-	// 	return nil, err
-	// }
+	if err := ensureFollowRelation(client, baseURL, users[0].AccessToken, users[1].UserID, "Alice 关注 Bob"); err != nil {
+		return nil, err
+	}
+	if err := ensureFollowRelation(client, baseURL, users[1].AccessToken, users[0].UserID, "Bob 关注 Alice"); err != nil {
+		return nil, err
+	}
+	if err := ensureFollowRelation(client, baseURL, users[0].AccessToken, users[2].UserID, "Alice 关注 Carol"); err != nil {
+		return nil, err
+	}
 
 	return &RelationFixture{
 		Alice: users[0],

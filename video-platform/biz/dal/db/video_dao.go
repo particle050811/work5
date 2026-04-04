@@ -57,7 +57,8 @@ func SearchVideos(store DBProvider, p SearchVideosParams, offset, limit int) ([]
 
 	// 作者用户名筛选
 	if p.Username != "" {
-		tx = tx.Joins("JOIN users ON users.id = videos.user_id").Where("users.username = ?", p.Username)
+		username := "%" + p.Username + "%"
+		tx = tx.Joins("JOIN users ON users.id = videos.user_id").Where("users.username LIKE ?", username)
 	}
 
 	var total int64
@@ -67,8 +68,7 @@ func SearchVideos(store DBProvider, p SearchVideosParams, offset, limit int) ([]
 
 	orderBy := "videos.created_at desc"
 	if p.SortByHot {
-		// 简化热度：点赞*3 + 评论*2 + 访问*1
-		orderBy = "(videos.like_count*3 + videos.comment_count*2 + videos.visit_count) desc"
+		orderBy = "videos.visit_count desc"
 	}
 
 	var videos []model.Video

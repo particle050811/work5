@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"log"
 	"time"
 
 	"video-platform/biz/dal"
@@ -81,6 +82,10 @@ func (s *VideoService) ListVideoComments(ctx context.Context, videoID uint, offs
 
 // GetHotVideos 获取热门视频列表
 func (s *VideoService) GetHotVideos(ctx context.Context, offset, limit int) ([]model.Video, int64, error) {
+	if !s.store.HasRedis() {
+		return s.listHotVideosFromDB(offset, limit)
+	}
+
 	var total int64
 	if err := s.store.DB().Model(&model.Video{}).Count(&total).Error; err != nil {
 		return nil, 0, err
@@ -89,17 +94,20 @@ func (s *VideoService) GetHotVideos(ctx context.Context, offset, limit int) ([]m
 	redisCli := s.store.Redis()
 	exists, err := redisCli.Exists(ctx, hotVideosKey).Result()
 	if err != nil {
-		return nil, 0, err
+		log.Printf("[视频模块][热门排行榜] Redis Exists 失败，回退数据库排序 key=%s: %v", hotVideosKey, err)
+		return s.listHotVideosFromDB(offset, limit)
 	}
 	if exists == 0 {
 		if err := s.rebuildHotVideosZSet(ctx, redisCli); err != nil {
-			return nil, 0, err
+			log.Printf("[视频模块][热门排行榜] Redis 热榜重建失败，回退数据库排序 key=%s: %v", hotVideosKey, err)
+			return s.listHotVideosFromDB(offset, limit)
 		}
 	}
 
 	zs, err := redisCli.ZRevRangeWithScores(ctx, hotVideosKey, int64(offset), int64(offset+limit-1)).Result()
 	if err != nil {
-		return nil, 0, err
+		log.Printf("[视频模块][热门排行榜] Redis 读取热榜失败，回退数据库排序 key=%s: %v", hotVideosKey, err)
+		return s.listHotVideosFromDB(offset, limit)
 	}
 
 	ids := make([]uint, 0, len(zs))
@@ -134,12 +142,33 @@ func (s *VideoService) GetHotVideos(ctx context.Context, offset, limit int) ([]m
 	return ordered, total, nil
 }
 
+func (s *VideoService) listHotVideosFromDB(offset, limit int) ([]model.Video, int64, error) {
+	var total int64
+	base := s.store.DB().Model(&model.Video{})
+	if err := base.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
+	var videos []model.Video
+	if err := base.
+		Order("visit_count desc").
+		Order("created_at desc").
+		Offset(offset).
+		Limit(limit).
+		Find(&videos).Error; err != nil {
+		return nil, 0, err
+	}
+
+	return videos, total, nil
+}
+
 // rebuildHotVideosZSet 重建热榜缓存
 func (s *VideoService) rebuildHotVideosZSet(ctx context.Context, redisCli dal.RedisClient) error {
 	var top []model.Video
 	if err := s.store.DB().
 		Model(&model.Video{}).
-		Order("(like_count*3 + comment_count*2 + visit_count) desc").
+		Order("visit_count desc").
+		Order("created_at desc").
 		Limit(topN).
 		Find(&top).Error; err != nil {
 		return err
@@ -147,7 +176,7 @@ func (s *VideoService) rebuildHotVideosZSet(ctx context.Context, redisCli dal.Re
 
 	zs := make([]redis.Z, 0, len(top))
 	for i := range top {
-		score := float64(top[i].LikeCount*3 + top[i].CommentCount*2 + top[i].VisitCount)
+		score := float64(top[i].VisitCount)
 		zs = append(zs, redis.Z{
 			Score:  score,
 			Member: fmt.Sprintf("%d", top[i].ID),

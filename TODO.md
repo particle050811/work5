@@ -60,7 +60,7 @@
 
 ### 5. 补齐项目结构图
 
-- [ ] 新增 README 或 `docs/architecture.md`
+- [x] 新增 README 或 `docs/architecture.md`
   - 课程要求：需要有目录树，答辩时方便讲解
   - 至少包含：
     - 目录结构图
@@ -72,7 +72,7 @@
 
 ### 1. 修复 Redis 降级逻辑
 
-- [ ] 让 Redis 连接失败时可降级，而不是直接退出
+- [x] 让 Redis 连接失败时可降级，而不是直接退出
   - 文件：[video-platform/biz/dal/redis.go](/home/particle/2025-2/west2onlie_GoWeb/work4/video-platform/biz/dal/redis.go)
   - 当前问题：
     - 未配置 `REDIS_ADDR` 会 `log.Fatal`
@@ -82,13 +82,13 @@
     - 热榜接口回退到 DB 计算
     - 日志中明确标记 Redis 降级
 
-- [ ] 修正 `HasRedis()` 逻辑
+- [x] 修正 `HasRedis()` 逻辑
   - 文件：[video-platform/biz/dal/store.go](/home/particle/2025-2/west2onlie_GoWeb/work4/video-platform/biz/dal/store.go)
   - 当前问题：固定返回 `true`
 
 ### 2. 完整验证 17 个接口的协议一致性
 
-- [ ] 对照官方文档逐项核验请求参数、响应结构和错误码
+- [x] 对照官方文档逐项核验请求参数、响应结构和错误码
   - 参考：[work4-api.md](/home/particle/2025-2/west2onlie_GoWeb/work4/work4-api.md)
   - 重点核验：
     - 分页字段默认值与上限

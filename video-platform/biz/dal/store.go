@@ -47,7 +47,7 @@ func (s *Store) Redis() RedisClient {
 
 // HasRedis 检查 Redis 是否可用
 func (s *Store) HasRedis() bool {
-	return true
+	return s != nil && s.redis != nil
 }
 
 // WithTx 在事务中执行操作，返回带事务的 Store

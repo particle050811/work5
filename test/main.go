@@ -276,6 +276,23 @@ func main() {
 	}
 	fmt.Println()
 
+	fmt.Println("【12.1】验证热榜缓存是否写入 Redis")
+	if !hotCacheAvailable() {
+		fmt.Println("    - 跳过（未配置 REDIS_ADDR，当前环境走降级路径）")
+	} else {
+		exists, err := hotCacheExists()
+		if err != nil {
+			fmt.Printf("    ✗ 检查失败: %v\n", err)
+			addError("12.1", fmt.Sprintf("检查失败: %v", err))
+		} else if exists {
+			fmt.Println("    ✓ 符合预期：热榜缓存键已写入 Redis")
+		} else {
+			fmt.Println("    ✗ 不符合预期：热榜缓存键未写入 Redis")
+			addError("12.1", "热门排行榜未写入 Redis 缓存")
+		}
+	}
+	fmt.Println()
+
 	// 13. 测试视频评论列表（新视频应为空）
 	fmt.Println("【13】测试视频评论列表（新视频应为空）")
 	if latestVideo == nil || latestVideo.ID == "" {
@@ -458,6 +475,33 @@ func main() {
 	}
 	fmt.Println()
 
+	fmt.Println("【20.1】测试分页参数标准化（page_num=0, page_size=100）")
+	if userID == "" {
+		fmt.Println("    - 跳过（无 user_id）")
+	} else {
+		normalizedListResult := testListPublishedVideos(client, baseURL, userID, 0, 100)
+		baselineListResult := testListPublishedVideos(client, baseURL, userID, 1, 10)
+		if normalizedListResult.Err != nil {
+			fmt.Printf("    ✗ 请求失败: %v\n", normalizedListResult.Err)
+			addError("20.1", fmt.Sprintf("请求失败: %v", normalizedListResult.Err))
+		} else if baselineListResult.Err != nil {
+			fmt.Printf("    ✗ 基线请求失败: %v\n", baselineListResult.Err)
+			addError("20.1", fmt.Sprintf("基线请求失败: %v", baselineListResult.Err))
+		} else if normalizedListResult.Data.Base.Code == 0 && baselineListResult.Data.Base.Code == 0 {
+			if len(normalizedListResult.Data.Data.Items) == len(baselineListResult.Data.Data.Items) &&
+				normalizedListResult.Data.Data.Total == baselineListResult.Data.Data.Total {
+				fmt.Println("    ✓ 符合预期：非法分页参数被标准化处理")
+			} else {
+				fmt.Println("    ✗ 不符合预期：分页标准化结果与首页基线不一致")
+				addError("20.1", "分页参数标准化结果与 page_num=1,page_size=10 不一致")
+			}
+		} else {
+			fmt.Printf("    ✗ 获取失败: %s / %s\n", normalizedListResult.Data.Base.Msg, baselineListResult.Data.Base.Msg)
+			addError("20.1", "分页标准化验证失败")
+		}
+	}
+	fmt.Println()
+
 	// 21. 测试删除他人评论（应该失败）
 	fmt.Println("【21】测试删除已删除的评论（应该失败-评论不存在）")
 	if latestCommentID == "" || accessToken == "" {
@@ -486,6 +530,58 @@ func main() {
 		addError("22", fmt.Sprintf("预置失败: %v", err))
 	} else {
 		fmt.Printf("    ✓ 已预置用户: %s, %s, %s\n", relationFixture.Alice.Username, relationFixture.Bob.Username, relationFixture.Carol.Username)
+	}
+	fmt.Println()
+
+	fmt.Println("【22.1】测试搜索条件为 AND（关键词 + 用户名）")
+	if relationFixture == nil {
+		fmt.Println("    - 跳过（预置失败）")
+	} else {
+		andKeyword := fmt.Sprintf("and-keyword-%d", time.Now().UnixNano())
+		aliceVideoPath, cleanupAliceVideo, prepErr := prepareNamedVideoFile("and-video")
+		if prepErr != nil {
+			fmt.Printf("    ✗ 准备视频文件失败: %v\n", prepErr)
+			addError("22.1", fmt.Sprintf("准备视频文件失败: %v", prepErr))
+		} else {
+			defer cleanupAliceVideo()
+			publishAliceResult := testPublishVideo(client, baseURL, relationFixture.Alice.AccessToken, andKeyword+" by alice", "and-search-fixture", aliceVideoPath)
+			if publishAliceResult.Err != nil {
+				fmt.Printf("    ✗ 请求失败: %v\n", publishAliceResult.Err)
+				addError("22.1", fmt.Sprintf("请求失败: %v", publishAliceResult.Err))
+			} else if publishAliceResult.Data.Base.Code != 0 {
+				fmt.Printf("    ✗ 发布测试视频失败: %s\n", publishAliceResult.Data.Base.Msg)
+				addError("22.1", fmt.Sprintf("发布测试视频失败: %s", publishAliceResult.Data.Base.Msg))
+			} else {
+				mainSearchResult := testSearchVideos(client, baseURL, andKeyword, 1, 10, seedUser.Username, 0, 0, "latest")
+				if mainSearchResult.Err != nil {
+					fmt.Printf("    ✗ 搜索请求失败: %v\n", mainSearchResult.Err)
+					addError("22.1", fmt.Sprintf("搜索请求失败: %v", mainSearchResult.Err))
+				} else if mainSearchResult.Data.Base.Code == 0 {
+					hasMainUserVideo := false
+					hasAliceVideo := false
+					for _, item := range mainSearchResult.Data.Data.Items {
+						if item.Title == videoTitle {
+							hasMainUserVideo = true
+						}
+						if item.Title == andKeyword+" by alice" {
+							hasAliceVideo = true
+						}
+					}
+					if !hasAliceVideo {
+						fmt.Println("    ✓ 符合预期：用户名与关键词组合过滤掉了 Alice 的视频")
+					} else {
+						fmt.Println("    ✗ 不符合预期：AND 搜索仍返回了 Alice 的视频")
+						addError("22.1", "搜索条件未按 AND 生效")
+					}
+					if !hasMainUserVideo {
+						fmt.Println("    - 提示：主测试用户当前没有匹配该关键词的视频，本次仅验证了排除分支")
+					}
+				} else {
+					fmt.Printf("    ✗ 搜索失败: %s（HTTP %d）\n", mainSearchResult.Data.Base.Msg, mainSearchResult.StatusCode)
+					addError("22.1", fmt.Sprintf("搜索失败: %s", mainSearchResult.Data.Base.Msg))
+				}
+			}
+		}
 	}
 	fmt.Println()
 
@@ -598,6 +694,141 @@ func main() {
 			} else {
 				fmt.Println("    ✗ 不符合预期：取消互关后 Bob 仍出现在 Alice 的好友列表中")
 				addError("27", "取消互关后好友列表未更新")
+			}
+		}
+	}
+	fmt.Println()
+
+	fmt.Println("【27.1】测试删除他人评论权限（应该返回 403）")
+	if relationFixture == nil || latestVideo == nil || latestVideo.ID == "" {
+		fmt.Println("    - 跳过（预置失败或无 video_id）")
+	} else {
+		otherCommentContent := fmt.Sprintf("alice-comment-%d", time.Now().UnixNano())
+		otherCommentResult := testPublishComment(client, baseURL, relationFixture.Alice.AccessToken, latestVideo.ID, otherCommentContent)
+		if otherCommentResult.Err != nil {
+			fmt.Printf("    ✗ 请求失败: %v\n", otherCommentResult.Err)
+			addError("27.1", fmt.Sprintf("请求失败: %v", otherCommentResult.Err))
+		} else if otherCommentResult.Data.Base.Code != 0 {
+			fmt.Printf("    ✗ 发布评论失败: %s（HTTP %d）\n", otherCommentResult.Data.Base.Msg, otherCommentResult.StatusCode)
+			addError("27.1", fmt.Sprintf("发布评论失败: %s", otherCommentResult.Data.Base.Msg))
+		} else {
+			aliceCommentsResult := testListUserComments(client, baseURL, relationFixture.Alice.UserID, 1, 10)
+			if aliceCommentsResult.Err != nil {
+				fmt.Printf("    ✗ 查询评论失败: %v\n", aliceCommentsResult.Err)
+				addError("27.1", fmt.Sprintf("查询评论失败: %v", aliceCommentsResult.Err))
+			} else if aliceCommentsResult.Data.Base.Code != 0 {
+				fmt.Printf("    ✗ 查询评论失败: %s（HTTP %d）\n", aliceCommentsResult.Data.Base.Msg, aliceCommentsResult.StatusCode)
+				addError("27.1", fmt.Sprintf("查询评论失败: %s", aliceCommentsResult.Data.Base.Msg))
+			} else {
+				targetCommentID := ""
+				for _, item := range aliceCommentsResult.Data.Data.Items {
+					if item.Content == otherCommentContent {
+						targetCommentID = item.ID
+						break
+					}
+				}
+				if targetCommentID == "" {
+					fmt.Println("    ✗ 未找到 Alice 刚发布的评论")
+					addError("27.1", "未找到 Alice 刚发布的评论")
+				} else {
+					forbiddenDeleteResult := testDeleteComment(client, baseURL, accessToken, targetCommentID)
+					if forbiddenDeleteResult.Err != nil {
+						fmt.Printf("    ✗ 删除请求失败: %v\n", forbiddenDeleteResult.Err)
+						addError("27.1", fmt.Sprintf("删除请求失败: %v", forbiddenDeleteResult.Err))
+					} else if forbiddenDeleteResult.StatusCode == http.StatusForbidden {
+						fmt.Printf("    ✓ 符合预期：删除他人评论被拒绝: %s\n", forbiddenDeleteResult.Data.Base.Msg)
+					} else {
+						fmt.Printf("    ✗ 不符合预期：删除他人评论应返回 403，实际 HTTP %d\n", forbiddenDeleteResult.StatusCode)
+						addError("27.1", fmt.Sprintf("删除他人评论应返回 403，实际 HTTP %d", forbiddenDeleteResult.StatusCode))
+					}
+				}
+			}
+		}
+	}
+	fmt.Println()
+
+	fmt.Println("【27.2】测试热门榜按 visit_count 排序")
+	if relationFixture == nil {
+		fmt.Println("    - 跳过（预置失败）")
+	} else {
+		hotTitleLow := fmt.Sprintf("hot-low-%d", time.Now().UnixNano())
+		hotTitleHigh := fmt.Sprintf("hot-high-%d", time.Now().UnixNano())
+		lowPath, cleanupLow, errLow := prepareNamedVideoFile("hot-low")
+		highPath, cleanupHigh, errHigh := prepareNamedVideoFile("hot-high")
+		if errLow != nil || errHigh != nil {
+			fmt.Printf("    ✗ 准备视频文件失败: %v %v\n", errLow, errHigh)
+			addError("27.2", "准备热门榜测试视频失败")
+		} else {
+			defer cleanupLow()
+			defer cleanupHigh()
+
+			lowPublish := testPublishVideo(client, baseURL, relationFixture.Alice.AccessToken, hotTitleLow, "visit-count-low", lowPath)
+			highPublish := testPublishVideo(client, baseURL, relationFixture.Alice.AccessToken, hotTitleHigh, "visit-count-high", highPath)
+			if lowPublish.Err != nil || highPublish.Err != nil {
+				fmt.Printf("    ✗ 发布测试视频失败: %v %v\n", lowPublish.Err, highPublish.Err)
+				addError("27.2", "发布热门榜测试视频失败")
+			} else if lowPublish.Data.Base.Code != 0 || highPublish.Data.Base.Code != 0 {
+				fmt.Printf("    ✗ 发布测试视频失败: %s / %s\n", lowPublish.Data.Base.Msg, highPublish.Data.Base.Msg)
+				addError("27.2", "发布热门榜测试视频失败")
+			} else {
+				aliceVideosResult := testListPublishedVideos(client, baseURL, relationFixture.Alice.UserID, 1, 20)
+				if aliceVideosResult.Err != nil {
+					fmt.Printf("    ✗ 查询 Alice 视频失败: %v\n", aliceVideosResult.Err)
+					addError("27.2", fmt.Sprintf("查询 Alice 视频失败: %v", aliceVideosResult.Err))
+				} else if aliceVideosResult.Data.Base.Code != 0 {
+					fmt.Printf("    ✗ 查询 Alice 视频失败: %s\n", aliceVideosResult.Data.Base.Msg)
+					addError("27.2", fmt.Sprintf("查询 Alice 视频失败: %s", aliceVideosResult.Data.Base.Msg))
+				} else {
+					lowID := ""
+					highID := ""
+					for _, item := range aliceVideosResult.Data.Data.Items {
+						if item.Title == hotTitleLow {
+							lowID = item.ID
+						}
+						if item.Title == hotTitleHigh {
+							highID = item.ID
+						}
+					}
+					if lowID == "" || highID == "" {
+						fmt.Println("    ✗ 未找到热门榜测试视频")
+						addError("27.2", "未找到热门榜测试视频")
+					} else if err := clearRedisCache(); err != nil {
+						fmt.Printf("    ✗ 清理 Redis 失败: %v\n", err)
+						addError("27.2", fmt.Sprintf("清理 Redis 失败: %v", err))
+					} else if err := setVideoVisitCount(lowID, 10); err != nil {
+						fmt.Printf("    ✗ 设置低热视频 visit_count 失败: %v\n", err)
+						addError("27.2", fmt.Sprintf("设置低热视频 visit_count 失败: %v", err))
+					} else if err := setVideoVisitCount(highID, 999); err != nil {
+						fmt.Printf("    ✗ 设置高热视频 visit_count 失败: %v\n", err)
+						addError("27.2", fmt.Sprintf("设置高热视频 visit_count 失败: %v", err))
+					} else {
+						hotRankResult := testGetHotVideos(client, baseURL, 1, 20)
+						if hotRankResult.Err != nil {
+							fmt.Printf("    ✗ 获取热榜失败: %v\n", hotRankResult.Err)
+							addError("27.2", fmt.Sprintf("获取热榜失败: %v", hotRankResult.Err))
+						} else if hotRankResult.Data.Base.Code != 0 {
+							fmt.Printf("    ✗ 获取热榜失败: %s\n", hotRankResult.Data.Base.Msg)
+							addError("27.2", fmt.Sprintf("获取热榜失败: %s", hotRankResult.Data.Base.Msg))
+						} else {
+							highIndex := -1
+							lowIndex := -1
+							for idx, item := range hotRankResult.Data.Data.Items {
+								if item.ID == highID {
+									highIndex = idx
+								}
+								if item.ID == lowID {
+									lowIndex = idx
+								}
+							}
+							if highIndex >= 0 && lowIndex >= 0 && highIndex < lowIndex {
+								fmt.Println("    ✓ 符合预期：热门榜按 visit_count 排序")
+							} else {
+								fmt.Println("    ✗ 不符合预期：热门榜未按 visit_count 排序")
+								addError("27.2", "热门榜未按 visit_count 排序")
+							}
+						}
+					}
+				}
 			}
 		}
 	}

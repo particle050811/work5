@@ -93,7 +93,7 @@ func (s *InteractionService) LikeVideo(ctx context.Context, userID, videoID uint
 	}
 
 	// 更新 Redis 热榜缓存（失败不阻塞主流程）
-	if likeDelta != 0 {
+	if likeDelta != 0 && s.store.HasRedis() {
 		scoreDelta := float64(likeDelta * 3) // 点赞权重为 3
 		if err := s.store.Redis().ZIncrBy(ctx, hotVideosKey, scoreDelta, fmt.Sprintf("%d", videoID)).Err(); err != nil {
 			log.Printf("[互动模块][点赞操作] 更新热榜缓存失败 video_id=%d: %v", videoID, err)
@@ -172,8 +172,10 @@ func (s *InteractionService) PublishComment(ctx context.Context, userID, videoID
 	}
 
 	// 更新 Redis 热榜缓存（评论权重为 2）
-	if err := s.store.Redis().ZIncrBy(ctx, hotVideosKey, 2.0, fmt.Sprintf("%d", videoID)).Err(); err != nil {
-		log.Printf("[互动模块][发布评论] 更新热榜缓存失败 video_id=%d: %v", videoID, err)
+	if s.store.HasRedis() {
+		if err := s.store.Redis().ZIncrBy(ctx, hotVideosKey, 2.0, fmt.Sprintf("%d", videoID)).Err(); err != nil {
+			log.Printf("[互动模块][发布评论] 更新热榜缓存失败 video_id=%d: %v", videoID, err)
+		}
 	}
 
 	return nil
@@ -215,8 +217,10 @@ func (s *InteractionService) DeleteComment(ctx context.Context, userID, commentI
 	}
 
 	// 更新 Redis 热榜缓存（评论权重为 -2）
-	if err := s.store.Redis().ZIncrBy(ctx, hotVideosKey, -2.0, fmt.Sprintf("%d", videoID)).Err(); err != nil {
-		log.Printf("[互动模块][删除评论] 更新热榜缓存失败 video_id=%d: %v", videoID, err)
+	if s.store.HasRedis() {
+		if err := s.store.Redis().ZIncrBy(ctx, hotVideosKey, -2.0, fmt.Sprintf("%d", videoID)).Err(); err != nil {
+			log.Printf("[互动模块][删除评论] 更新热榜缓存失败 video_id=%d: %v", videoID, err)
+		}
 	}
 
 	return nil
