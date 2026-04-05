@@ -21,6 +21,9 @@ func TestJWTManagerGenerateAndValidateTokenPair(t *testing.T) {
 	if accessToken == "" || refreshToken == "" {
 		t.Fatal("GenerateTokenPair() 返回了空 token")
 	}
+	if accessToken == refreshToken {
+		t.Fatal("access token 和 refresh token 不应相同")
+	}
 
 	accessClaims, err := manager.ValidateAccessToken(accessToken)
 	if err != nil {
