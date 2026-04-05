@@ -38,7 +38,7 @@ func Register(ctx context.Context, c *app.RequestContext) {
 			})
 			return
 		}
-		log.Printf("[用户模块][注册] 注册失败 username=%s: %v", req.Username, err)
+		log.Printf("[用户模块][注册] 创建用户失败 username=%s: %v", req.Username, err)
 		c.JSON(consts.StatusInternalServerError, &v1.RegisterResponse{
 			Base: response.InternalError(),
 		})
@@ -76,7 +76,7 @@ func Login(ctx context.Context, c *app.RequestContext) {
 			})
 			return
 		}
-		log.Printf("[用户模块][登录] 登录失败 username=%s: %v", req.Username, err)
+		log.Printf("[用户模块][登录] 用户登录失败 username=%s: %v", req.Username, err)
 		c.JSON(consts.StatusInternalServerError, &v1.LoginResponse{
 			Base: response.InternalError(),
 		})

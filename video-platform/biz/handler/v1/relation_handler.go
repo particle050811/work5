@@ -84,7 +84,7 @@ func RelationAction(ctx context.Context, c *app.RequestContext) {
 			})
 			return
 		}
-		log.Printf("[社交模块][关注操作] 操作失败 user_id=%d target_user_id=%d: %v", userID, targetUserID, err)
+		log.Printf("[社交模块][关注操作] 执行关注操作失败 user_id=%d target_user_id=%d: %v", userID, targetUserID, err)
 		c.JSON(consts.StatusInternalServerError, &v1.RelationActionResponse{
 			Base: response.InternalError(),
 		})

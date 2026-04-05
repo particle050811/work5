@@ -77,7 +77,7 @@ func VideoLikeAction(ctx context.Context, c *app.RequestContext) {
 			})
 			return
 		}
-		log.Printf("[互动模块][点赞操作] 操作失败 video_id=%d user_id=%d: %v", videoID, userID, err)
+		log.Printf("[互动模块][点赞操作] 执行点赞操作失败 video_id=%d user_id=%d: %v", videoID, userID, err)
 		c.JSON(consts.StatusInternalServerError, &v1.VideoLikeActionResponse{
 			Base: response.InternalError(),
 		})
@@ -195,7 +195,7 @@ func PublishComment(ctx context.Context, c *app.RequestContext) {
 			})
 			return
 		}
-		log.Printf("[互动模块][发布评论] 发布失败 video_id=%d user_id=%d: %v", videoID, userID, err)
+		log.Printf("[互动模块][发布评论] 发布评论失败 video_id=%d user_id=%d: %v", videoID, userID, err)
 		c.JSON(consts.StatusInternalServerError, &v1.PublishCommentResponse{
 			Base: response.InternalError(),
 		})
@@ -303,7 +303,7 @@ func DeleteComment(ctx context.Context, c *app.RequestContext) {
 			})
 			return
 		}
-		log.Printf("[互动模块][删除评论] 删除失败 comment_id=%d user_id=%d: %v", commentID, userID, err)
+		log.Printf("[互动模块][删除评论] 删除评论失败 comment_id=%d user_id=%d: %v", commentID, userID, err)
 		c.JSON(consts.StatusInternalServerError, &v1.DeleteCommentResponse{
 			Base: response.InternalError(),
 		})

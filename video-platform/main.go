@@ -10,11 +10,22 @@ import (
 	"github.com/hertz-contrib/cors"
 	"github.com/joho/godotenv"
 	"video-platform/biz/dal"
+	"video-platform/pkg/logger"
+	"video-platform/pkg/middleware"
 	"video-platform/pkg/storage"
 	"video-platform/swagger"
 )
 
 func main() {
+	if err := logger.Init(); err != nil {
+		log.Fatalf("初始化日志失败: %v", err)
+	}
+	defer func() {
+		if err := logger.Sync(); err != nil {
+			log.Printf("刷新日志缓冲失败: %v", err)
+		}
+	}()
+
 	// 加载 .env 配置文件
 	if err := godotenv.Load(); err != nil {
 		log.Println("未找到 .env 文件，将使用系统环境变量")
@@ -29,6 +40,7 @@ func main() {
 	}
 
 	h := server.Default(server.WithHostPorts(":" + port))
+	h.Use(middleware.RequestLogMiddleware())
 	h.Use(cors.Default())
 
 	register(h)

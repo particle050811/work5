@@ -164,7 +164,7 @@ func SearchVideos(ctx context.Context, c *app.RequestContext) {
 		SortByHot: sortByHot,
 	}, offset, pageSize)
 	if err != nil {
-		log.Printf("[视频模块][搜索视频] 搜索失败 keywords=%s username=%s: %v", req.Keywords, req.Username, err)
+		log.Printf("[视频模块][搜索视频] 查询视频失败 keywords=%s username=%s: %v", req.Keywords, req.Username, err)
 		c.JSON(consts.StatusInternalServerError, &v1.SearchVideosResponse{
 			Base: response.InternalError(),
 		})
@@ -215,7 +215,7 @@ func ListVideoComments(ctx context.Context, c *app.RequestContext) {
 	svc := service.NewVideoService(dal.GetStore())
 	items, total, err := svc.ListVideoComments(ctx, videoID, offset, pageSize)
 	if err != nil {
-		log.Printf("[视频模块][视频评论列表] 查询失败 video_id=%d: %v", videoID, err)
+		log.Printf("[视频模块][视频评论列表] 查询评论列表失败 video_id=%d: %v", videoID, err)
 		c.JSON(consts.StatusInternalServerError, &v1.ListVideoCommentsResponse{
 			Base: response.InternalError(),
 		})
@@ -260,7 +260,7 @@ func GetHotVideos(ctx context.Context, c *app.RequestContext) {
 	svc := service.NewVideoService(dal.GetStore())
 	videos, total, err := svc.GetHotVideos(ctx, offset, pageSize)
 	if err != nil {
-		log.Printf("[视频模块][热门排行榜] 获取热榜失败: %v", err)
+		log.Printf("[视频模块][热门排行榜] 查询热榜失败 page_num=%d page_size=%d: %v", req.PageNum, req.PageSize, err)
 		c.JSON(consts.StatusInternalServerError, &v1.GetHotVideosResponse{
 			Base: response.InternalError(),
 		})
