@@ -480,7 +480,7 @@ func main() {
 		fmt.Println("    - 跳过（无 user_id）")
 	} else {
 		normalizedListResult := testListPublishedVideos(client, baseURL, userID, 0, 100)
-		baselineListResult := testListPublishedVideos(client, baseURL, userID, 1, 10)
+		baselineListResult := testListPublishedVideos(client, baseURL, userID, 1, 50)
 		if normalizedListResult.Err != nil {
 			fmt.Printf("    ✗ 请求失败: %v\n", normalizedListResult.Err)
 			addError("20.1", fmt.Sprintf("请求失败: %v", normalizedListResult.Err))
@@ -493,7 +493,7 @@ func main() {
 				fmt.Println("    ✓ 符合预期：非法分页参数被标准化处理")
 			} else {
 				fmt.Println("    ✗ 不符合预期：分页标准化结果与首页基线不一致")
-				addError("20.1", "分页参数标准化结果与 page_num=1,page_size=10 不一致")
+				addError("20.1", "分页参数标准化结果与 page_num=1,page_size=50 不一致")
 			}
 		} else {
 			fmt.Printf("    ✗ 获取失败: %s / %s\n", normalizedListResult.Data.Base.Msg, baselineListResult.Data.Base.Msg)
