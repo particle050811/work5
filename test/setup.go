@@ -50,22 +50,26 @@ type SeedUser struct {
 }
 
 func loginSeedUser(client *http.Client, baseURL, username, password string) (*SeedUser, error) {
-	// 首次准备测试数据时，可临时打开下面这段注册逻辑，插入一次后再继续保持注释状态。
-	//
-	// registerResult := testRegister(client, baseURL, username, password)
-	// if registerResult.Err != nil {
-	// 	return nil, fmt.Errorf("注册测试用户 %s 失败: %w", username, registerResult.Err)
-	// }
-	// if registerResult.Data.Base.Code != 0 && !isUserAlreadyExists(registerResult.Data.Base.Msg) {
-	// 	return nil, fmt.Errorf("注册测试用户 %s 失败: %s", username, registerResult.Data.Base.Msg)
-	// }
-
 	loginResult := testLogin(client, baseURL, username, password)
 	if loginResult.Err != nil {
 		return nil, fmt.Errorf("登录测试用户 %s 失败: %w", username, loginResult.Err)
 	}
+	if loginResult.Data.Base.Code != 0 && isUserNotFound(loginResult.Data.Base.Msg) {
+		registerResult := testRegister(client, baseURL, username, password)
+		if registerResult.Err != nil {
+			return nil, fmt.Errorf("注册测试用户 %s 失败: %w", username, registerResult.Err)
+		}
+		if registerResult.Data.Base.Code != 0 && !isUserAlreadyExists(registerResult.Data.Base.Msg) {
+			return nil, fmt.Errorf("注册测试用户 %s 失败: %s", username, registerResult.Data.Base.Msg)
+		}
+
+		loginResult = testLogin(client, baseURL, username, password)
+		if loginResult.Err != nil {
+			return nil, fmt.Errorf("重新登录测试用户 %s 失败: %w", username, loginResult.Err)
+		}
+	}
 	if loginResult.Data.Base.Code != 0 {
-		return nil, fmt.Errorf("登录测试用户 %s 失败: %s；如为首次运行，请先临时打开 setup.go 中的注册代码插入一次", username, loginResult.Data.Base.Msg)
+		return nil, fmt.Errorf("登录测试用户 %s 失败: %s", username, loginResult.Data.Base.Msg)
 	}
 
 	return &SeedUser{
@@ -82,6 +86,12 @@ func isUserAlreadyExists(msg string) bool {
 	return strings.Contains(lowerMsg, "已存在") ||
 		strings.Contains(lowerMsg, "already exists") ||
 		strings.Contains(lowerMsg, "duplicate")
+}
+
+func isUserNotFound(msg string) bool {
+	lowerMsg := strings.ToLower(msg)
+	return strings.Contains(lowerMsg, "不存在") ||
+		strings.Contains(lowerMsg, "not found")
 }
 
 func resetTestEnvironment() error {

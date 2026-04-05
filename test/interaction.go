@@ -6,6 +6,12 @@ import (
 	"strconv"
 )
 
+func testVideoLikeActionRaw(client *http.Client, baseURL, token string, body map[string]any) Result[VideoLikeActionResponse] {
+	var result VideoLikeActionResponse
+	status, raw, err := doJSON(client, http.MethodPost, baseURL+"/api/v1/interaction/like", body, token, &result)
+	return Result[VideoLikeActionResponse]{Data: result, StatusCode: status, RawBody: raw, Err: err}
+}
+
 func testListVideoComments(client *http.Client, baseURL, videoID string, pageNum, pageSize int) Result[ListVideoCommentsResponse] {
 	u, err := url.Parse(baseURL + "/api/v1/video/comments")
 	if err != nil {
@@ -29,9 +35,7 @@ func testVideoLikeAction(client *http.Client, baseURL, token, videoID string, ac
 		"video_id":    videoID,
 		"action_type": actionType,
 	}
-	var result VideoLikeActionResponse
-	status, raw, err := doJSON(client, http.MethodPost, baseURL+"/api/v1/interaction/like", body, token, &result)
-	return Result[VideoLikeActionResponse]{Data: result, StatusCode: status, RawBody: raw, Err: err}
+	return testVideoLikeActionRaw(client, baseURL, token, body)
 }
 
 // testListLikedVideos 获取用户点赞的视频列表
@@ -57,6 +61,10 @@ func testPublishComment(client *http.Client, baseURL, token, videoID, content st
 		"video_id": videoID,
 		"content":  content,
 	}
+	return testPublishCommentRaw(client, baseURL, token, body)
+}
+
+func testPublishCommentRaw(client *http.Client, baseURL, token string, body map[string]any) Result[PublishCommentResponse] {
 	var result PublishCommentResponse
 	status, raw, err := doJSON(client, http.MethodPost, baseURL+"/api/v1/interaction/comment", body, token, &result)
 	return Result[PublishCommentResponse]{Data: result, StatusCode: status, RawBody: raw, Err: err}
@@ -84,6 +92,10 @@ func testDeleteComment(client *http.Client, baseURL, token, commentID string) Re
 	body := map[string]any{
 		"comment_id": commentID,
 	}
+	return testDeleteCommentRaw(client, baseURL, token, body)
+}
+
+func testDeleteCommentRaw(client *http.Client, baseURL, token string, body map[string]any) Result[DeleteCommentResponse] {
 	var result DeleteCommentResponse
 	status, raw, err := doJSON(client, http.MethodPost, baseURL+"/api/v1/interaction/comment/delete", body, token, &result)
 	return Result[DeleteCommentResponse]{Data: result, StatusCode: status, RawBody: raw, Err: err}

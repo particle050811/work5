@@ -6,15 +6,19 @@ import (
 	"strconv"
 )
 
+func testRelationActionRaw(client *http.Client, baseURL, token string, body map[string]any) Result[RelationActionResponse] {
+	var result RelationActionResponse
+	status, raw, err := doJSON(client, http.MethodPost, baseURL+"/api/v1/relation/action", body, token, &result)
+	return Result[RelationActionResponse]{Data: result, StatusCode: status, RawBody: raw, Err: err}
+}
+
 // testFollowUser 关注用户
 func testFollowUser(client *http.Client, baseURL, token, toUserID string) Result[RelationActionResponse] {
 	body := map[string]any{
 		"to_user_id":  toUserID,
 		"action_type": 1,
 	}
-	var result RelationActionResponse
-	status, raw, err := doJSON(client, http.MethodPost, baseURL+"/api/v1/relation/action", body, token, &result)
-	return Result[RelationActionResponse]{Data: result, StatusCode: status, RawBody: raw, Err: err}
+	return testRelationActionRaw(client, baseURL, token, body)
 }
 
 // testUnfollowUser 取消关注
@@ -23,9 +27,7 @@ func testUnfollowUser(client *http.Client, baseURL, token, toUserID string) Resu
 		"to_user_id":  toUserID,
 		"action_type": 2,
 	}
-	var result RelationActionResponse
-	status, raw, err := doJSON(client, http.MethodPost, baseURL+"/api/v1/relation/action", body, token, &result)
-	return Result[RelationActionResponse]{Data: result, StatusCode: status, RawBody: raw, Err: err}
+	return testRelationActionRaw(client, baseURL, token, body)
 }
 
 // testGetFollowingList 获取关注列表

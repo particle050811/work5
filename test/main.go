@@ -834,6 +834,87 @@ func main() {
 	}
 	fmt.Println()
 
+	fmt.Println("【27.3】测试未登录访问点赞接口（应该失败）")
+	if latestVideo == nil || latestVideo.ID == "" {
+		fmt.Println("    - 跳过（无 video_id）")
+	} else {
+		unauthorizedLikeResult := testVideoLikeAction(client, baseURL, "", latestVideo.ID, 1)
+		if unauthorizedLikeResult.Err != nil {
+			fmt.Printf("    ✗ 请求失败: %v\n", unauthorizedLikeResult.Err)
+			addError("27.3", fmt.Sprintf("请求失败: %v", unauthorizedLikeResult.Err))
+		} else if unauthorizedLikeResult.StatusCode == http.StatusUnauthorized {
+			fmt.Printf("    ✓ 符合预期：未登录点赞被拒绝: %s\n", unauthorizedLikeResult.Data.Base.Msg)
+		} else {
+			fmt.Printf("    ✗ 不符合预期：未登录点赞应返回 401，实际 HTTP %d\n", unauthorizedLikeResult.StatusCode)
+			addError("27.3", fmt.Sprintf("未登录点赞应返回 401，实际 HTTP %d", unauthorizedLikeResult.StatusCode))
+		}
+	}
+	fmt.Println()
+
+	fmt.Println("【27.4】测试参数缺失（comment_id 为空，应返回 400）")
+	if accessToken == "" {
+		fmt.Println("    - 跳过（未登录）")
+	} else {
+		missingCommentIDResult := testDeleteCommentRaw(client, baseURL, accessToken, map[string]any{})
+		if missingCommentIDResult.Err != nil {
+			fmt.Printf("    ✗ 请求失败: %v\n", missingCommentIDResult.Err)
+			addError("27.4", fmt.Sprintf("请求失败: %v", missingCommentIDResult.Err))
+		} else if missingCommentIDResult.StatusCode == http.StatusBadRequest {
+			fmt.Printf("    ✓ 符合预期：缺少 comment_id 被拒绝: %s\n", missingCommentIDResult.Data.Base.Msg)
+		} else {
+			fmt.Printf("    ✗ 不符合预期：缺少 comment_id 应返回 400，实际 HTTP %d\n", missingCommentIDResult.StatusCode)
+			addError("27.4", fmt.Sprintf("缺少 comment_id 应返回 400，实际 HTTP %d", missingCommentIDResult.StatusCode))
+		}
+	}
+	fmt.Println()
+
+	fmt.Println("【27.5】测试非法 ID（user_id 非数字，应返回 400）")
+	invalidUserIDResult := testGetUserInfo(client, baseURL, "abc")
+	if invalidUserIDResult.Err != nil {
+		fmt.Printf("    ✗ 请求失败: %v\n", invalidUserIDResult.Err)
+		addError("27.5", fmt.Sprintf("请求失败: %v", invalidUserIDResult.Err))
+	} else if invalidUserIDResult.StatusCode == http.StatusBadRequest {
+		fmt.Printf("    ✓ 符合预期：非法 user_id 被拒绝: %s\n", invalidUserIDResult.Data.Base.Msg)
+	} else {
+		fmt.Printf("    ✗ 不符合预期：非法 user_id 应返回 400，实际 HTTP %d\n", invalidUserIDResult.StatusCode)
+		addError("27.5", fmt.Sprintf("非法 user_id 应返回 400，实际 HTTP %d", invalidUserIDResult.StatusCode))
+	}
+	fmt.Println()
+
+	fmt.Println("【27.6】测试非法 ID（video_id 非数字，应返回 400）")
+	if accessToken == "" {
+		fmt.Println("    - 跳过（未登录）")
+	} else {
+		invalidVideoIDResult := testVideoLikeAction(client, baseURL, accessToken, "abc", 1)
+		if invalidVideoIDResult.Err != nil {
+			fmt.Printf("    ✗ 请求失败: %v\n", invalidVideoIDResult.Err)
+			addError("27.6", fmt.Sprintf("请求失败: %v", invalidVideoIDResult.Err))
+		} else if invalidVideoIDResult.StatusCode == http.StatusBadRequest {
+			fmt.Printf("    ✓ 符合预期：非法 video_id 被拒绝: %s\n", invalidVideoIDResult.Data.Base.Msg)
+		} else {
+			fmt.Printf("    ✗ 不符合预期：非法 video_id 应返回 400，实际 HTTP %d\n", invalidVideoIDResult.StatusCode)
+			addError("27.6", fmt.Sprintf("非法 video_id 应返回 400，实际 HTTP %d", invalidVideoIDResult.StatusCode))
+		}
+	}
+	fmt.Println()
+
+	fmt.Println("【27.7】测试重复关注（应该幂等成功）")
+	if relationFixture == nil {
+		fmt.Println("    - 跳过（预置失败）")
+	} else {
+		duplicateFollowResult := testFollowUser(client, baseURL, relationFixture.Alice.AccessToken, relationFixture.Carol.UserID)
+		if duplicateFollowResult.Err != nil {
+			fmt.Printf("    ✗ 请求失败: %v\n", duplicateFollowResult.Err)
+			addError("27.7", fmt.Sprintf("请求失败: %v", duplicateFollowResult.Err))
+		} else if duplicateFollowResult.StatusCode == http.StatusOK && duplicateFollowResult.Data.Base.Code == 0 {
+			fmt.Printf("    ✓ 符合预期：重复关注幂等成功: %s\n", duplicateFollowResult.Data.Base.Msg)
+		} else {
+			fmt.Printf("    ✗ 不符合预期：重复关注应幂等成功，实际 HTTP %d，msg=%s\n", duplicateFollowResult.StatusCode, duplicateFollowResult.Data.Base.Msg)
+			addError("27.7", fmt.Sprintf("重复关注应幂等成功，实际 HTTP %d", duplicateFollowResult.StatusCode))
+		}
+	}
+	fmt.Println()
+
 	// 输出测试汇总
 	fmt.Println("========== 测试完成 ==========")
 	if len(errors) == 0 {
