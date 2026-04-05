@@ -14,6 +14,24 @@
 | 2025-12-16 | ID 类型设计：uint vs string | [08-id-type-design.md](./08-id-type-design.md) |
 | 2025-12-16 | Go 变量声明与赋值详解 | [09-go-variable-declaration.md](./09-go-variable-declaration.md) |
 | 2025-12-23 | GORM 模型设计详解 | [10-gorm-model-design.md](./10-gorm-model-design.md) |
+| 2026-04-05 | 统一请求日志与业务日志设计 | [11-request-log-and-logger.md](./11-request-log-and-logger.md) |
+
+### 11-request-log-and-logger.md 内容概要
+
+| 章节 | 内容 |
+|------|------|
+| §1 | 问题背景（统一日志是否替代业务日志、日志保存位置） |
+| §2 | 统一请求日志接入方式（`main.go` 全局挂载） |
+| §3 | `RequestLogMiddleware` 完整流程（request_id、耗时、状态码） |
+| §4 | 为什么能拿到 `user_id`（与 `AuthMiddleware` 的执行顺序） |
+| §5 | 统一请求日志字段说明 |
+| §6 | 请求日志与业务日志的职责划分 |
+| §7 | 当前日志输出位置（stdout/stderr，而非固定文件） |
+| §8 | `log.Printf` 与 zap 的桥接机制 |
+| §9 | 一次鉴权请求的完整日志链路 |
+| §10 | 关键代码位置 |
+| §11 | 推荐阅读 |
+| §12 | 总结 |
 
 ### 10-gorm-model-design.md 内容概要
 
@@ -143,5 +161,6 @@
 - [x] ID 类型设计 (`08-id-type-design.md`) ✅ 2025-12-16
 - [x] Go 变量声明 (`09-go-variable-declaration.md`) ✅ 2025-12-16
 - [x] GORM 模型设计 (`10-gorm-model-design.md`) ✅ 2025-12-23
+- [x] 统一请求日志 (`11-request-log-and-logger.md`) ✅ 2026-04-05
 - [ ] Redis / 缓存应用 (`11-redis-cache.md`)
 - [ ] 社交模块 (`12-relation-module.md`)
