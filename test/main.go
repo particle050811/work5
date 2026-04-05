@@ -747,28 +747,28 @@ func main() {
 	}
 	fmt.Println()
 
-	fmt.Println("【27.2】测试热门榜按 visit_count 排序")
+	fmt.Println("【27.2】测试热门榜按综合热度排序")
 	if relationFixture == nil {
 		fmt.Println("    - 跳过（预置失败）")
 	} else {
-		hotTitleLow := fmt.Sprintf("hot-low-%d", time.Now().UnixNano())
-		hotTitleHigh := fmt.Sprintf("hot-high-%d", time.Now().UnixNano())
-		lowPath, cleanupLow, errLow := prepareNamedVideoFile("hot-low")
-		highPath, cleanupHigh, errHigh := prepareNamedVideoFile("hot-high")
-		if errLow != nil || errHigh != nil {
-			fmt.Printf("    ✗ 准备视频文件失败: %v %v\n", errLow, errHigh)
+		hotTitleVisit := fmt.Sprintf("hot-visit-%d", time.Now().UnixNano())
+		hotTitleScore := fmt.Sprintf("hot-score-%d", time.Now().UnixNano())
+		visitPath, cleanupVisit, errVisit := prepareNamedVideoFile("hot-visit")
+		scorePath, cleanupScore, errScore := prepareNamedVideoFile("hot-score")
+		if errVisit != nil || errScore != nil {
+			fmt.Printf("    ✗ 准备视频文件失败: %v %v\n", errVisit, errScore)
 			addError("27.2", "准备热门榜测试视频失败")
 		} else {
-			defer cleanupLow()
-			defer cleanupHigh()
+			defer cleanupVisit()
+			defer cleanupScore()
 
-			lowPublish := testPublishVideo(client, baseURL, relationFixture.Alice.AccessToken, hotTitleLow, "visit-count-low", lowPath)
-			highPublish := testPublishVideo(client, baseURL, relationFixture.Alice.AccessToken, hotTitleHigh, "visit-count-high", highPath)
-			if lowPublish.Err != nil || highPublish.Err != nil {
-				fmt.Printf("    ✗ 发布测试视频失败: %v %v\n", lowPublish.Err, highPublish.Err)
+			visitPublish := testPublishVideo(client, baseURL, relationFixture.Alice.AccessToken, hotTitleVisit, "visit-count", visitPath)
+			scorePublish := testPublishVideo(client, baseURL, relationFixture.Alice.AccessToken, hotTitleScore, "score-priority", scorePath)
+			if visitPublish.Err != nil || scorePublish.Err != nil {
+				fmt.Printf("    ✗ 发布测试视频失败: %v %v\n", visitPublish.Err, scorePublish.Err)
 				addError("27.2", "发布热门榜测试视频失败")
-			} else if lowPublish.Data.Base.Code != 0 || highPublish.Data.Base.Code != 0 {
-				fmt.Printf("    ✗ 发布测试视频失败: %s / %s\n", lowPublish.Data.Base.Msg, highPublish.Data.Base.Msg)
+			} else if visitPublish.Data.Base.Code != 0 || scorePublish.Data.Base.Code != 0 {
+				fmt.Printf("    ✗ 发布测试视频失败: %s / %s\n", visitPublish.Data.Base.Msg, scorePublish.Data.Base.Msg)
 				addError("27.2", "发布热门榜测试视频失败")
 			} else {
 				aliceVideosResult := testListPublishedVideos(client, baseURL, relationFixture.Alice.UserID, 1, 20)
@@ -779,28 +779,28 @@ func main() {
 					fmt.Printf("    ✗ 查询 Alice 视频失败: %s\n", aliceVideosResult.Data.Base.Msg)
 					addError("27.2", fmt.Sprintf("查询 Alice 视频失败: %s", aliceVideosResult.Data.Base.Msg))
 				} else {
-					lowID := ""
-					highID := ""
+					visitID := ""
+					scoreID := ""
 					for _, item := range aliceVideosResult.Data.Data.Items {
-						if item.Title == hotTitleLow {
-							lowID = item.ID
+						if item.Title == hotTitleVisit {
+							visitID = item.ID
 						}
-						if item.Title == hotTitleHigh {
-							highID = item.ID
+						if item.Title == hotTitleScore {
+							scoreID = item.ID
 						}
 					}
-					if lowID == "" || highID == "" {
+					if visitID == "" || scoreID == "" {
 						fmt.Println("    ✗ 未找到热门榜测试视频")
 						addError("27.2", "未找到热门榜测试视频")
 					} else if err := clearRedisCache(); err != nil {
 						fmt.Printf("    ✗ 清理 Redis 失败: %v\n", err)
 						addError("27.2", fmt.Sprintf("清理 Redis 失败: %v", err))
-					} else if err := setVideoVisitCount(lowID, 10); err != nil {
-						fmt.Printf("    ✗ 设置低热视频 visit_count 失败: %v\n", err)
-						addError("27.2", fmt.Sprintf("设置低热视频 visit_count 失败: %v", err))
-					} else if err := setVideoVisitCount(highID, 999); err != nil {
-						fmt.Printf("    ✗ 设置高热视频 visit_count 失败: %v\n", err)
-						addError("27.2", fmt.Sprintf("设置高热视频 visit_count 失败: %v", err))
+					} else if err := setVideoHotStats(visitID, 60, 0, 0); err != nil {
+						fmt.Printf("    ✗ 设置访问量视频热度失败: %v\n", err)
+						addError("27.2", fmt.Sprintf("设置访问量视频热度失败: %v", err))
+					} else if err := setVideoHotStats(scoreID, 20, 20, 5); err != nil {
+						fmt.Printf("    ✗ 设置综合热度视频失败: %v\n", err)
+						addError("27.2", fmt.Sprintf("设置综合热度视频失败: %v", err))
 					} else {
 						hotRankResult := testGetHotVideos(client, baseURL, 1, 20)
 						if hotRankResult.Err != nil {
@@ -810,21 +810,21 @@ func main() {
 							fmt.Printf("    ✗ 获取热榜失败: %s\n", hotRankResult.Data.Base.Msg)
 							addError("27.2", fmt.Sprintf("获取热榜失败: %s", hotRankResult.Data.Base.Msg))
 						} else {
-							highIndex := -1
-							lowIndex := -1
+							scoreIndex := -1
+							visitIndex := -1
 							for idx, item := range hotRankResult.Data.Data.Items {
-								if item.ID == highID {
-									highIndex = idx
+								if item.ID == scoreID {
+									scoreIndex = idx
 								}
-								if item.ID == lowID {
-									lowIndex = idx
+								if item.ID == visitID {
+									visitIndex = idx
 								}
 							}
-							if highIndex >= 0 && lowIndex >= 0 && highIndex < lowIndex {
-								fmt.Println("    ✓ 符合预期：热门榜按 visit_count 排序")
+							if scoreIndex >= 0 && visitIndex >= 0 && scoreIndex < visitIndex {
+								fmt.Println("    ✓ 符合预期：热门榜按综合热度排序")
 							} else {
-								fmt.Println("    ✗ 不符合预期：热门榜未按 visit_count 排序")
-								addError("27.2", "热门榜未按 visit_count 排序")
+								fmt.Println("    ✗ 不符合预期：热门榜未按综合热度排序")
+								addError("27.2", "热门榜未按综合热度排序")
 							}
 						}
 					}

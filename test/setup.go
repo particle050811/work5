@@ -15,7 +15,11 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
-const hotVideosKey = "fanone:video:hot:zset"
+const (
+	hotVideosKey            = "fanone:video:hot:zset"
+	hotVideosEmptyKey       = "fanone:video:hot:empty"
+	hotVideosRebuildLockKey = "fanone:video:hot:rebuild:lock"
+)
 
 // RelationFixture 记录社交模块预置数据。
 //
@@ -142,7 +146,7 @@ func clearRedisCache() error {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	if err := cli.Del(ctx, hotVideosKey).Err(); err != nil {
+	if err := cli.Del(ctx, hotVideosKey, hotVideosEmptyKey, hotVideosRebuildLockKey).Err(); err != nil {
 		return fmt.Errorf("清理 Redis 热榜缓存失败 addr=%s: %w", addr, err)
 	}
 	return nil
@@ -217,6 +221,10 @@ func prepareNamedVideoFile(prefix string) (string, func(), error) {
 }
 
 func setVideoVisitCount(videoID string, visitCount int64) error {
+	return setVideoHotStats(videoID, visitCount, 0, 0)
+}
+
+func setVideoHotStats(videoID string, visitCount, likeCount, commentCount int64) error {
 	dsn, err := getConfigValue("DB_DSN")
 	if err != nil {
 		return err
@@ -228,8 +236,14 @@ func setVideoVisitCount(videoID string, visitCount int64) error {
 	}
 	defer db.Close()
 
-	if _, err := db.Exec("UPDATE videos SET visit_count = ? WHERE id = ?", visitCount, videoID); err != nil {
-		return fmt.Errorf("更新视频 visit_count 失败 video_id=%s: %w", videoID, err)
+	if _, err := db.Exec(
+		"UPDATE videos SET visit_count = ?, like_count = ?, comment_count = ? WHERE id = ?",
+		visitCount,
+		likeCount,
+		commentCount,
+		videoID,
+	); err != nil {
+		return fmt.Errorf("更新视频热度字段失败 video_id=%s: %w", videoID, err)
 	}
 	return nil
 }

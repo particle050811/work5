@@ -3,17 +3,15 @@ package dal
 import (
 	"log"
 
+	"gorm.io/gorm"
 	"video-platform/biz/dal/db"
 	"video-platform/biz/dal/model"
-
-	"github.com/redis/go-redis/v9"
-	"gorm.io/gorm"
 )
 
 // Store 统一数据访问层，聚合 MySQL 和 Redis
 type Store struct {
 	db    *gorm.DB
-	redis *redis.Client
+	redis RedisClient
 }
 
 var defaultStore *Store

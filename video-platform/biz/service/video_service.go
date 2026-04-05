@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"math/rand"
 	"time"
 
 	"video-platform/biz/dal"
@@ -15,9 +16,15 @@ import (
 )
 
 const (
-	hotVideosKey = "fanone:video:hot:zset"
-	cacheTTL     = 5 * time.Minute
-	topN         = 200
+	hotVideosKey            = "fanone:video:hot:zset"
+	hotVideosEmptyKey       = "fanone:video:hot:empty"
+	hotVideosRebuildLockKey = "fanone:video:hot:rebuild:lock"
+	cacheTTL                = 5 * time.Minute
+	emptyCacheTTL           = 30 * time.Second
+	cacheTTLJitterMax       = 90 * time.Second
+	rebuildLockTTL          = 15 * time.Second
+	rebuildRetryDelay       = 120 * time.Millisecond
+	topN                    = 200
 )
 
 // VideoService 视频服务
@@ -92,16 +99,16 @@ func (s *VideoService) GetHotVideos(ctx context.Context, offset, limit int) ([]m
 	}
 
 	redisCli := s.store.Redis()
-	exists, err := redisCli.Exists(ctx, hotVideosKey).Result()
+	ready, emptyResult, err := s.ensureHotVideosCache(ctx, redisCli)
 	if err != nil {
-		log.Printf("[视频模块][热门排行榜] Redis Exists 失败，回退数据库排序 key=%s: %v", hotVideosKey, err)
+		log.Printf("[视频模块][热门排行榜] 热榜缓存检查失败，回退数据库排序 key=%s: %v", hotVideosKey, err)
 		return s.listHotVideosFromDB(offset, limit)
 	}
-	if exists == 0 {
-		if err := s.rebuildHotVideosZSet(ctx, redisCli); err != nil {
-			log.Printf("[视频模块][热门排行榜] Redis 热榜重建失败，回退数据库排序 key=%s: %v", hotVideosKey, err)
-			return s.listHotVideosFromDB(offset, limit)
-		}
+	if emptyResult {
+		return []model.Video{}, total, nil
+	}
+	if !ready {
+		return s.listHotVideosFromDB(offset, limit)
 	}
 
 	zs, err := redisCli.ZRevRangeWithScores(ctx, hotVideosKey, int64(offset), int64(offset+limit-1)).Result()
@@ -151,7 +158,7 @@ func (s *VideoService) listHotVideosFromDB(offset, limit int) ([]model.Video, in
 
 	var videos []model.Video
 	if err := base.
-		Order("visit_count desc").
+		Order(hotScoreOrderSQL()).
 		Order("created_at desc").
 		Offset(offset).
 		Limit(limit).
@@ -162,37 +169,100 @@ func (s *VideoService) listHotVideosFromDB(offset, limit int) ([]model.Video, in
 	return videos, total, nil
 }
 
+func (s *VideoService) ensureHotVideosCache(ctx context.Context, redisCli dal.RedisClient) (bool, bool, error) {
+	exists, err := redisCli.Exists(ctx, hotVideosKey, hotVideosEmptyKey).Result()
+	if err != nil {
+		return false, false, err
+	}
+	if exists > 0 {
+		emptyExists, err := redisCli.Exists(ctx, hotVideosEmptyKey).Result()
+		if err != nil {
+			return false, false, err
+		}
+		return true, emptyExists > 0, nil
+	}
+
+	locked, err := redisCli.SetNX(ctx, hotVideosRebuildLockKey, "1", rebuildLockTTL).Result()
+	if err != nil {
+		return false, false, err
+	}
+	if locked {
+		defer func() {
+			if delErr := redisCli.Del(ctx, hotVideosRebuildLockKey).Err(); delErr != nil {
+				log.Printf("[视频模块][热门排行榜] 释放重建锁失败 key=%s: %v", hotVideosRebuildLockKey, delErr)
+			}
+		}()
+		emptyResult, rebuildErr := s.rebuildHotVideosCache(ctx, redisCli)
+		return rebuildErr == nil, emptyResult, rebuildErr
+	}
+
+	time.Sleep(rebuildRetryDelay)
+	exists, err = redisCli.Exists(ctx, hotVideosKey, hotVideosEmptyKey).Result()
+	if err != nil {
+		return false, false, err
+	}
+	if exists == 0 {
+		return false, false, nil
+	}
+	emptyExists, err := redisCli.Exists(ctx, hotVideosEmptyKey).Result()
+	if err != nil {
+		return false, false, err
+	}
+	return true, emptyExists > 0, nil
+}
+
 // rebuildHotVideosZSet 重建热榜缓存
-func (s *VideoService) rebuildHotVideosZSet(ctx context.Context, redisCli dal.RedisClient) error {
+func (s *VideoService) rebuildHotVideosCache(ctx context.Context, redisCli dal.RedisClient) (bool, error) {
 	var top []model.Video
 	if err := s.store.DB().
 		Model(&model.Video{}).
-		Order("visit_count desc").
+		Order(hotScoreOrderSQL()).
 		Order("created_at desc").
 		Limit(topN).
 		Find(&top).Error; err != nil {
-		return err
+		return false, err
+	}
+
+	if err := redisCli.Del(ctx, hotVideosKey, hotVideosEmptyKey).Err(); err != nil {
+		return false, err
+	}
+	if len(top) == 0 {
+		if err := redisCli.Set(ctx, hotVideosEmptyKey, "1", emptyCacheTTLWithJitter()).Err(); err != nil {
+			return false, err
+		}
+		return true, nil
 	}
 
 	zs := make([]redis.Z, 0, len(top))
 	for i := range top {
-		score := float64(top[i].VisitCount)
+		score := calculateVideoHotScore(top[i])
 		zs = append(zs, redis.Z{
 			Score:  score,
 			Member: fmt.Sprintf("%d", top[i].ID),
 		})
 	}
 
-	if err := redisCli.Del(ctx, hotVideosKey).Err(); err != nil {
-		return err
+	if err := redisCli.ZAdd(ctx, hotVideosKey, zs...).Err(); err != nil {
+		return false, err
 	}
-	if len(zs) > 0 {
-		if err := redisCli.ZAdd(ctx, hotVideosKey, zs...).Err(); err != nil {
-			return err
-		}
+	if err := redisCli.Expire(ctx, hotVideosKey, cacheTTLWithJitter()).Err(); err != nil {
+		return false, err
 	}
-	if err := redisCli.Expire(ctx, hotVideosKey, cacheTTL).Err(); err != nil {
-		return err
-	}
-	return nil
+	return false, nil
+}
+
+func calculateVideoHotScore(video model.Video) float64 {
+	return float64(video.LikeCount*3 + video.CommentCount*2 + video.VisitCount)
+}
+
+func hotScoreOrderSQL() string {
+	return "(like_count * 3 + comment_count * 2 + visit_count) desc"
+}
+
+func cacheTTLWithJitter() time.Duration {
+	return cacheTTL + time.Duration(rand.Int63n(int64(cacheTTLJitterMax)+1))
+}
+
+func emptyCacheTTLWithJitter() time.Duration {
+	return emptyCacheTTL + time.Duration(rand.Int63n(int64(emptyCacheTTL)/2+1))
 }
