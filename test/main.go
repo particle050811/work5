@@ -795,14 +795,14 @@ func main() {
 					} else if err := clearRedisCache(); err != nil {
 						fmt.Printf("    ✗ 清理 Redis 失败: %v\n", err)
 						addError("27.2", fmt.Sprintf("清理 Redis 失败: %v", err))
-					} else if err := setVideoHotStats(visitID, 60, 0, 0); err != nil {
+					} else if err := setVideoHotStats(visitID, 2000, 0, 0); err != nil {
 						fmt.Printf("    ✗ 设置访问量视频热度失败: %v\n", err)
 						addError("27.2", fmt.Sprintf("设置访问量视频热度失败: %v", err))
-					} else if err := setVideoHotStats(scoreID, 20, 20, 5); err != nil {
+					} else if err := setVideoHotStats(scoreID, 10, 600, 100); err != nil {
 						fmt.Printf("    ✗ 设置综合热度视频失败: %v\n", err)
 						addError("27.2", fmt.Sprintf("设置综合热度视频失败: %v", err))
 					} else {
-						hotRankResult := testGetHotVideos(client, baseURL, 1, 20)
+						hotRankResult := testGetHotVideos(client, baseURL, 1, 50)
 						if hotRankResult.Err != nil {
 							fmt.Printf("    ✗ 获取热榜失败: %v\n", hotRankResult.Err)
 							addError("27.2", fmt.Sprintf("获取热榜失败: %v", hotRankResult.Err))

@@ -13,9 +13,11 @@ COMPOSE_PROJECT_NAME="${COMPOSE_PROJECT_NAME:-fanone-micro}"
 mkdir -p "$PID_DIR" "$LOG_DIR" "$BIN_DIR"
 
 export JWT_SECRET="${JWT_SECRET:-fanone-microservices-secret-key-2024}"
-export MYSQL_ROOT_PASSWORD="${MYSQL_ROOT_PASSWORD:-123456}"
+export MYSQL_ROOT_PASSWORD="${MYSQL_ROOT_PASSWORD:-hsr123456}"
 export REDIS_PASSWORD="${REDIS_PASSWORD:-}"
 export REDIS_DB="${REDIS_DB:-0}"
+export USE_DOCKER_MYSQL="${USE_DOCKER_MYSQL:-false}"
+export USE_DOCKER_REDIS="${USE_DOCKER_REDIS:-false}"
 
 RESERVED_PORTS=""
 
@@ -90,8 +92,11 @@ wait_for_health() {
   return 1
 }
 
-quote_env() {
-  printf "%q" "$1"
+escape_env_value() {
+  local value="$1"
+  value="${value//\\/\\\\}"
+  value="${value//\"/\\\"}"
+  printf '"%s"' "$value"
 }
 
 container_host_port() {
@@ -119,40 +124,44 @@ refresh_runtime_endpoints() {
   local etcd_port mysql_port redis_port
 
   etcd_port="$(container_host_port etcd 2379/tcp)"
-  mysql_port="$(container_host_port mysql 3306/tcp)"
-  redis_port="$(container_host_port redis 6379/tcp)"
 
   export ETCD_HOST_PORT="$etcd_port"
-  export MYSQL_HOST_PORT="$mysql_port"
-  export REDIS_HOST_PORT="$redis_port"
   export ETCD_ENDPOINTS="127.0.0.1:$etcd_port"
-  export USER_DB_DSN="root:${MYSQL_ROOT_PASSWORD}@tcp(127.0.0.1:$mysql_port)/fanone_user?charset=utf8mb4&parseTime=True&loc=Local"
-  export VIDEO_DB_DSN="root:${MYSQL_ROOT_PASSWORD}@tcp(127.0.0.1:$mysql_port)/fanone_video?charset=utf8mb4&parseTime=True&loc=Local"
-  export INTERACTION_DB_DSN="root:${MYSQL_ROOT_PASSWORD}@tcp(127.0.0.1:$mysql_port)/fanone_interaction?charset=utf8mb4&parseTime=True&loc=Local"
-  export REDIS_ADDR="127.0.0.1:$redis_port"
+  if [[ "$USE_DOCKER_MYSQL" == "true" ]]; then
+    mysql_port="$(container_host_port mysql 3306/tcp)"
+    export MYSQL_HOST_PORT="$mysql_port"
+    export USER_DB_DSN="root:${MYSQL_ROOT_PASSWORD}@tcp(127.0.0.1:$mysql_port)/fanone_user?charset=utf8mb4&parseTime=True&loc=Local"
+    export VIDEO_DB_DSN="root:${MYSQL_ROOT_PASSWORD}@tcp(127.0.0.1:$mysql_port)/fanone_video?charset=utf8mb4&parseTime=True&loc=Local"
+    export INTERACTION_DB_DSN="root:${MYSQL_ROOT_PASSWORD}@tcp(127.0.0.1:$mysql_port)/fanone_interaction?charset=utf8mb4&parseTime=True&loc=Local"
+  fi
+  if [[ "$USE_DOCKER_REDIS" == "true" ]]; then
+    redis_port="$(container_host_port redis 6379/tcp)"
+    export REDIS_HOST_PORT="$redis_port"
+    export REDIS_ADDR="127.0.0.1:$redis_port"
+  fi
 }
 
 write_env_file() {
   {
-    printf "COMPOSE_PROJECT_NAME=%s\n" "$(quote_env "$COMPOSE_PROJECT_NAME")"
-    printf "ETCD_ENDPOINTS=%s\n" "$(quote_env "$ETCD_ENDPOINTS")"
-    printf "USER_DB_DSN=%s\n" "$(quote_env "$USER_DB_DSN")"
-    printf "VIDEO_DB_DSN=%s\n" "$(quote_env "$VIDEO_DB_DSN")"
-    printf "INTERACTION_DB_DSN=%s\n" "$(quote_env "$INTERACTION_DB_DSN")"
-    printf "MYSQL_ROOT_PASSWORD=%s\n" "$(quote_env "$MYSQL_ROOT_PASSWORD")"
-    printf "REDIS_ADDR=%s\n" "$(quote_env "$REDIS_ADDR")"
-    printf "REDIS_PASSWORD=%s\n" "$(quote_env "$REDIS_PASSWORD")"
-    printf "REDIS_DB=%s\n" "$(quote_env "$REDIS_DB")"
-    printf "JWT_SECRET=%s\n" "$(quote_env "$JWT_SECRET")"
-    printf "STORAGE_ROOT=%s\n" "$(quote_env "$STORAGE_ROOT")"
-    printf "USER_RPC_ADDR=%s\n" "$(quote_env "$USER_RPC_ADDR")"
-    printf "VIDEO_RPC_ADDR=%s\n" "$(quote_env "$VIDEO_RPC_ADDR")"
-    printf "INTERACTION_RPC_ADDR=%s\n" "$(quote_env "$INTERACTION_RPC_ADDR")"
-    printf "CHAT_RPC_ADDR=%s\n" "$(quote_env "$CHAT_RPC_ADDR")"
-    printf "CHAT_HTTP_ADDR=%s\n" "$(quote_env "$CHAT_HTTP_ADDR")"
-    printf "GATEWAY_HTTP_ADDR=%s\n" "$(quote_env "$GATEWAY_HTTP_ADDR")"
-    printf "BASE_URL=%s\n" "$(quote_env "http://localhost:${GATEWAY_HTTP_ADDR##*:}")"
-    printf "CHAT_BASE_URL=%s\n" "$(quote_env "http://localhost:${CHAT_HTTP_ADDR##*:}")"
+    printf "COMPOSE_PROJECT_NAME=%s\n" "$(escape_env_value "$COMPOSE_PROJECT_NAME")"
+    printf "ETCD_ENDPOINTS=%s\n" "$(escape_env_value "$ETCD_ENDPOINTS")"
+    printf "USER_DB_DSN=%s\n" "$(escape_env_value "$USER_DB_DSN")"
+    printf "VIDEO_DB_DSN=%s\n" "$(escape_env_value "$VIDEO_DB_DSN")"
+    printf "INTERACTION_DB_DSN=%s\n" "$(escape_env_value "$INTERACTION_DB_DSN")"
+    printf "MYSQL_ROOT_PASSWORD=%s\n" "$(escape_env_value "$MYSQL_ROOT_PASSWORD")"
+    printf "REDIS_ADDR=%s\n" "$(escape_env_value "$REDIS_ADDR")"
+    printf "REDIS_PASSWORD=%s\n" "$(escape_env_value "$REDIS_PASSWORD")"
+    printf "REDIS_DB=%s\n" "$(escape_env_value "$REDIS_DB")"
+    printf "JWT_SECRET=%s\n" "$(escape_env_value "$JWT_SECRET")"
+    printf "STORAGE_ROOT=%s\n" "$(escape_env_value "$STORAGE_ROOT")"
+    printf "USER_RPC_ADDR=%s\n" "$(escape_env_value "$USER_RPC_ADDR")"
+    printf "VIDEO_RPC_ADDR=%s\n" "$(escape_env_value "$VIDEO_RPC_ADDR")"
+    printf "INTERACTION_RPC_ADDR=%s\n" "$(escape_env_value "$INTERACTION_RPC_ADDR")"
+    printf "CHAT_RPC_ADDR=%s\n" "$(escape_env_value "$CHAT_RPC_ADDR")"
+    printf "CHAT_HTTP_ADDR=%s\n" "$(escape_env_value "$CHAT_HTTP_ADDR")"
+    printf "GATEWAY_HTTP_ADDR=%s\n" "$(escape_env_value "$GATEWAY_HTTP_ADDR")"
+    printf "BASE_URL=%s\n" "$(escape_env_value "http://localhost:${GATEWAY_HTTP_ADDR##*:}")"
+    printf "CHAT_BASE_URL=%s\n" "$(escape_env_value "http://localhost:${CHAT_HTTP_ADDR##*:}")"
   } >"$ENV_FILE"
 }
 
@@ -223,16 +232,30 @@ ETCD_HOST_PORT="${ETCD_HOST_PORT:-$(choose_port 2379 22379)}"
 reserve_port "$ETCD_HOST_PORT"
 ETCD_PEER_HOST_PORT="${ETCD_PEER_HOST_PORT:-$(choose_port 2380 22380)}"
 reserve_port "$ETCD_PEER_HOST_PORT"
-MYSQL_HOST_PORT="${MYSQL_HOST_PORT:-$(choose_port 3306 23306)}"
-reserve_port "$MYSQL_HOST_PORT"
-REDIS_HOST_PORT="${REDIS_HOST_PORT:-$(choose_port 6379 26379)}"
-reserve_port "$REDIS_HOST_PORT"
+if [[ "$USE_DOCKER_MYSQL" == "true" ]]; then
+  MYSQL_HOST_PORT="${MYSQL_HOST_PORT:-$(choose_port 3306 23306)}"
+  reserve_port "$MYSQL_HOST_PORT"
+fi
+if [[ "$USE_DOCKER_REDIS" == "true" ]]; then
+  REDIS_HOST_PORT="${REDIS_HOST_PORT:-$(choose_port 6379 26379)}"
+  reserve_port "$REDIS_HOST_PORT"
+fi
 
 export ETCD_ENDPOINTS="${ETCD_ENDPOINTS:-127.0.0.1:$ETCD_HOST_PORT}"
-export USER_DB_DSN="${USER_DB_DSN:-root:${MYSQL_ROOT_PASSWORD}@tcp(127.0.0.1:$MYSQL_HOST_PORT)/fanone_user?charset=utf8mb4&parseTime=True&loc=Local}"
-export VIDEO_DB_DSN="${VIDEO_DB_DSN:-root:${MYSQL_ROOT_PASSWORD}@tcp(127.0.0.1:$MYSQL_HOST_PORT)/fanone_video?charset=utf8mb4&parseTime=True&loc=Local}"
-export INTERACTION_DB_DSN="${INTERACTION_DB_DSN:-root:${MYSQL_ROOT_PASSWORD}@tcp(127.0.0.1:$MYSQL_HOST_PORT)/fanone_interaction?charset=utf8mb4&parseTime=True&loc=Local}"
-export REDIS_ADDR="${REDIS_ADDR:-127.0.0.1:$REDIS_HOST_PORT}"
+if [[ "$USE_DOCKER_MYSQL" == "true" ]]; then
+  export USER_DB_DSN="${USER_DB_DSN:-root:${MYSQL_ROOT_PASSWORD}@tcp(127.0.0.1:$MYSQL_HOST_PORT)/fanone_user?charset=utf8mb4&parseTime=True&loc=Local}"
+  export VIDEO_DB_DSN="${VIDEO_DB_DSN:-root:${MYSQL_ROOT_PASSWORD}@tcp(127.0.0.1:$MYSQL_HOST_PORT)/fanone_video?charset=utf8mb4&parseTime=True&loc=Local}"
+  export INTERACTION_DB_DSN="${INTERACTION_DB_DSN:-root:${MYSQL_ROOT_PASSWORD}@tcp(127.0.0.1:$MYSQL_HOST_PORT)/fanone_interaction?charset=utf8mb4&parseTime=True&loc=Local}"
+else
+  export USER_DB_DSN="${USER_DB_DSN:-root:${MYSQL_ROOT_PASSWORD}@tcp(127.0.0.1:3306)/fanone_user?charset=utf8mb4&parseTime=True&loc=Local}"
+  export VIDEO_DB_DSN="${VIDEO_DB_DSN:-root:${MYSQL_ROOT_PASSWORD}@tcp(127.0.0.1:3306)/fanone_video?charset=utf8mb4&parseTime=True&loc=Local}"
+  export INTERACTION_DB_DSN="${INTERACTION_DB_DSN:-root:${MYSQL_ROOT_PASSWORD}@tcp(127.0.0.1:3306)/fanone_interaction?charset=utf8mb4&parseTime=True&loc=Local}"
+fi
+if [[ "$USE_DOCKER_REDIS" == "true" ]]; then
+  export REDIS_ADDR="${REDIS_ADDR:-127.0.0.1:$REDIS_HOST_PORT}"
+else
+  export REDIS_ADDR="${REDIS_ADDR:-127.0.0.1:6379}"
+fi
 export STORAGE_ROOT="${STORAGE_ROOT:-$ROOT_DIR/storage}"
 
 export USER_RPC_ADDR="${USER_RPC_ADDR:-0.0.0.0:$(choose_port 9001 19001)}"
@@ -248,17 +271,29 @@ reserve_port "${CHAT_HTTP_ADDR##*:}"
 export GATEWAY_HTTP_ADDR="${GATEWAY_HTTP_ADDR:-:$(choose_port 8888 18888)}"
 reserve_port "${GATEWAY_HTTP_ADDR##*:}"
 
-echo "[dev-up] 启动基础设施容器 etcd/mysql/redis"
+infra_services=("etcd")
+if [[ "$USE_DOCKER_MYSQL" == "true" ]]; then
+  infra_services+=("mysql")
+fi
+if [[ "$USE_DOCKER_REDIS" == "true" ]]; then
+  infra_services+=("redis")
+fi
+
+echo "[dev-up] 启动基础设施容器 ${infra_services[*]}"
 ETCD_HOST_PORT="$ETCD_HOST_PORT" \
 ETCD_PEER_HOST_PORT="$ETCD_PEER_HOST_PORT" \
-MYSQL_HOST_PORT="$MYSQL_HOST_PORT" \
+MYSQL_HOST_PORT="${MYSQL_HOST_PORT:-3306}" \
 MYSQL_ROOT_PASSWORD="$MYSQL_ROOT_PASSWORD" \
-REDIS_HOST_PORT="$REDIS_HOST_PORT" \
-compose -f "$COMPOSE_FILE" up -d etcd mysql redis
+REDIS_HOST_PORT="${REDIS_HOST_PORT:-6379}" \
+compose -f "$COMPOSE_FILE" up -d "${infra_services[@]}"
 
 wait_for_health "etcd"
-wait_for_health "mysql"
-wait_for_health "redis"
+if [[ "$USE_DOCKER_MYSQL" == "true" ]]; then
+  wait_for_health "mysql"
+fi
+if [[ "$USE_DOCKER_REDIS" == "true" ]]; then
+  wait_for_health "redis"
+fi
 refresh_runtime_endpoints
 write_env_file
 

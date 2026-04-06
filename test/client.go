@@ -14,10 +14,13 @@ const defaultBaseURL = "http://localhost:8888"
 
 func getBaseURL() string {
 	v := strings.TrimSpace(os.Getenv("BASE_URL"))
-	if v == "" {
-		return defaultBaseURL
+	if v != "" {
+		return strings.TrimRight(v, "/")
 	}
-	return strings.TrimRight(v, "/")
+	if v, ok := getConfigValueOptional("BASE_URL"); ok && strings.TrimSpace(v) != "" {
+		return strings.TrimRight(v, "/")
+	}
+	return defaultBaseURL
 }
 
 func checkServerAvailable(client *http.Client, baseURL string) bool {

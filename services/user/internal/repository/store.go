@@ -1,10 +1,7 @@
 package repository
 
 import (
-	"log"
-
 	"example.com/fanone/services/user/internal/repository/db"
-	"example.com/fanone/services/user/internal/repository/model"
 	"gorm.io/gorm"
 )
 
@@ -20,7 +17,6 @@ func Init() {
 	defaultStore = &Store{
 		db: db.InitMySQL(),
 	}
-	autoMigrate(defaultStore.db)
 }
 
 // GetStore 获取全局 Store 实例
@@ -39,15 +35,4 @@ func (s *Store) WithTx(fn func(txStore *Store) error) error {
 		txStore := &Store{db: tx}
 		return fn(txStore)
 	})
-}
-
-// autoMigrate 自动迁移所有模型
-func autoMigrate(gormDB *gorm.DB) {
-	err := gormDB.AutoMigrate(
-		&model.User{},
-	)
-	if err != nil {
-		log.Fatalf("数据库迁移失败: %v", err)
-	}
-	log.Println("数据库迁移完成")
 }

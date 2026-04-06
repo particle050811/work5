@@ -1,10 +1,7 @@
 package repository
 
 import (
-	"log"
-
 	"example.com/fanone/services/video/internal/repository/db"
-	"example.com/fanone/services/video/internal/repository/model"
 	"gorm.io/gorm"
 )
 
@@ -22,7 +19,6 @@ func Init() {
 		db:    db.InitMySQL(),
 		redis: initRedis(), // 失败返回 nil，不 panic
 	}
-	autoMigrate(defaultStore.db)
 }
 
 // GetStore 获取全局 Store 实例
@@ -51,16 +47,4 @@ func (s *Store) WithTx(fn func(txStore *Store) error) error {
 		txStore := &Store{db: tx, redis: s.redis}
 		return fn(txStore)
 	})
-}
-
-// autoMigrate 自动迁移所有模型
-func autoMigrate(gormDB *gorm.DB) {
-	err := gormDB.AutoMigrate(
-		&model.User{},
-		&model.Video{},
-	)
-	if err != nil {
-		log.Fatalf("数据库迁移失败: %v", err)
-	}
-	log.Println("数据库迁移完成")
 }

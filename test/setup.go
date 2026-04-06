@@ -388,7 +388,7 @@ func loadValueFromEnvFile(key string) (string, bool) {
 			}
 
 			v := strings.TrimSpace(line[idx+1:])
-			v = strings.Trim(v, `"'`)
+			v = normalizeEnvValue(v)
 			_ = file.Close()
 			return v, true
 		}
@@ -396,4 +396,36 @@ func loadValueFromEnvFile(key string) (string, bool) {
 	}
 
 	return "", false
+}
+
+func normalizeEnvValue(value string) string {
+	value = strings.TrimSpace(value)
+	value = strings.Trim(value, `"'`)
+	if strings.Contains(value, `\`) {
+		value = unescapeShellValue(value)
+	}
+	return value
+}
+
+func unescapeShellValue(value string) string {
+	var builder strings.Builder
+	builder.Grow(len(value))
+
+	escaped := false
+	for _, ch := range value {
+		if escaped {
+			builder.WriteRune(ch)
+			escaped = false
+			continue
+		}
+		if ch == '\\' {
+			escaped = true
+			continue
+		}
+		builder.WriteRune(ch)
+	}
+	if escaped {
+		builder.WriteByte('\\')
+	}
+	return builder.String()
 }

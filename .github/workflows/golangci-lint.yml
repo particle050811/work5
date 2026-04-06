@@ -6,12 +6,16 @@ on:
       - main
       - master
     paths:
-      - "video-platform/**"
+      - "**/*.go"
+      - "go.mod"
+      - "go.sum"
       - ".golangci.yml"
       - ".github/workflows/golangci-lint.yml"
   pull_request:
     paths:
-      - "video-platform/**"
+      - "**/*.go"
+      - "go.mod"
+      - "go.sum"
       - ".golangci.yml"
       - ".github/workflows/golangci-lint.yml"
   workflow_dispatch:
@@ -20,10 +24,6 @@ jobs:
   lint:
     runs-on: ubuntu-latest
 
-    defaults:
-      run:
-        working-directory: video-platform
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -31,12 +31,12 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version-file: video-platform/go.mod
-          cache-dependency-path: video-platform/go.sum
+          go-version-file: go.mod
+          cache-dependency-path: go.sum
 
       - name: Run golangci-lint
         uses: golangci/golangci-lint-action@v9
         with:
-          version: v2.1
-          working-directory: video-platform
-          args: --config=../.golangci.yml
+          version: v2.1.6
+          install-mode: goinstall
+          args: --config=.golangci.yml
