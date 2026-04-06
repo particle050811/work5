@@ -10,15 +10,16 @@ import (
 )
 
 type RPCHandler struct {
-	store *repository.Store
+	store       *repository.Store
+	videoSyncer service.VideoCounterSyncer
 }
 
-func NewRPCHandler(store *repository.Store) *RPCHandler {
-	return &RPCHandler{store: store}
+func NewRPCHandler(store *repository.Store, videoSyncer service.VideoCounterSyncer) *RPCHandler {
+	return &RPCHandler{store: store, videoSyncer: videoSyncer}
 }
 
 func (h *RPCHandler) VideoLikeAction(ctx context.Context, req *interactionv1.VideoLikeActionRequest) (*interactionv1.VideoLikeActionResponse, error) {
-	svc := service.NewInteractionService(h.store)
+	svc := service.NewInteractionService(h.store, h.videoSyncer)
 	action := service.LikeActionAdd
 	if req.GetActionType() == 2 {
 		action = service.LikeActionCancel
@@ -29,7 +30,7 @@ func (h *RPCHandler) VideoLikeAction(ctx context.Context, req *interactionv1.Vid
 
 func (h *RPCHandler) ListLikedVideos(ctx context.Context, req *interactionv1.ListLikedVideosRequest) (*interactionv1.ListLikedVideosResponse, error) {
 	_, pageSize, offset := normalizePage(req.GetPageNum(), req.GetPageSize())
-	svc := service.NewInteractionService(h.store)
+	svc := service.NewInteractionService(h.store, h.videoSyncer)
 	items, total, err := svc.ListLikedVideos(ctx, uint(req.GetUserId()), offset, pageSize)
 	if err != nil {
 		return nil, err
@@ -38,14 +39,14 @@ func (h *RPCHandler) ListLikedVideos(ctx context.Context, req *interactionv1.Lis
 }
 
 func (h *RPCHandler) PublishComment(ctx context.Context, req *interactionv1.PublishCommentRequest) (*interactionv1.PublishCommentResponse, error) {
-	svc := service.NewInteractionService(h.store)
+	svc := service.NewInteractionService(h.store, h.videoSyncer)
 	err := svc.PublishComment(ctx, uint(req.GetUserId()), uint(req.GetVideoId()), req.GetContent())
 	return &interactionv1.PublishCommentResponse{}, err
 }
 
 func (h *RPCHandler) ListUserComments(ctx context.Context, req *interactionv1.ListUserCommentsRequest) (*interactionv1.ListUserCommentsResponse, error) {
 	_, pageSize, offset := normalizePage(req.GetPageNum(), req.GetPageSize())
-	svc := service.NewInteractionService(h.store)
+	svc := service.NewInteractionService(h.store, h.videoSyncer)
 	items, total, err := svc.ListUserComments(ctx, uint(req.GetUserId()), offset, pageSize)
 	if err != nil {
 		return nil, err
@@ -59,7 +60,7 @@ func (h *RPCHandler) ListUserComments(ctx context.Context, req *interactionv1.Li
 
 func (h *RPCHandler) ListVideoComments(ctx context.Context, req *interactionv1.ListVideoCommentsRequest) (*interactionv1.ListVideoCommentsResponse, error) {
 	_, pageSize, offset := normalizePage(req.GetPageNum(), req.GetPageSize())
-	svc := service.NewInteractionService(h.store)
+	svc := service.NewInteractionService(h.store, h.videoSyncer)
 	items, total, err := svc.ListVideoComments(ctx, uint(req.GetVideoId()), offset, pageSize)
 	if err != nil {
 		return nil, err
@@ -80,7 +81,7 @@ func (h *RPCHandler) ListVideoComments(ctx context.Context, req *interactionv1.L
 }
 
 func (h *RPCHandler) DeleteComment(ctx context.Context, req *interactionv1.DeleteCommentRequest) (*interactionv1.DeleteCommentResponse, error) {
-	svc := service.NewInteractionService(h.store)
+	svc := service.NewInteractionService(h.store, h.videoSyncer)
 	videoID, err := svc.DeleteComment(ctx, uint(req.GetUserId()), uint(req.GetCommentId()))
 	return &interactionv1.DeleteCommentResponse{VideoId: uint64(videoID)}, err
 }
@@ -126,7 +127,7 @@ func (h *RPCHandler) ListFriends(ctx context.Context, req *interactionv1.ListFri
 }
 
 func (h *RPCHandler) SyncUser(ctx context.Context, req *interactionv1.SyncUserRequest) (*interactionv1.SyncUserResponse, error) {
-	svc := service.NewInteractionService(h.store)
+	svc := service.NewInteractionService(h.store, h.videoSyncer)
 	if err := svc.SyncUser(ctx, &model.User{
 		ID:        uint(req.GetId()),
 		Username:  req.GetUsername(),
@@ -139,7 +140,7 @@ func (h *RPCHandler) SyncUser(ctx context.Context, req *interactionv1.SyncUserRe
 
 func (h *RPCHandler) SyncVideo(ctx context.Context, req *interactionv1.SyncVideoRequest) (*interactionv1.SyncVideoResponse, error) {
 	video := req.GetVideo()
-	svc := service.NewInteractionService(h.store)
+	svc := service.NewInteractionService(h.store, h.videoSyncer)
 	if err := svc.SyncVideo(ctx, &model.Video{
 		ID:           uint(video.GetId()),
 		UserID:       uint(video.GetUserId()),

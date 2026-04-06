@@ -29,12 +29,16 @@ const (
 
 // VideoService 视频服务
 type VideoService struct {
-	store *repository.Store
+	store  *repository.Store
+	syncer InteractionVideoSyncer
 }
 
 // NewVideoService 创建视频服务实例
-func NewVideoService(store *repository.Store) *VideoService {
-	return &VideoService{store: store}
+func NewVideoService(store *repository.Store, syncer InteractionVideoSyncer) *VideoService {
+	if syncer == nil {
+		syncer = noopInteractionVideoSyncer{}
+	}
+	return &VideoService{store: store, syncer: syncer}
 }
 
 // CreateVideo 创建视频
@@ -42,6 +46,7 @@ func (s *VideoService) CreateVideo(ctx context.Context, video *model.Video) erro
 	if err := db.CreateVideo(s.store, video); err != nil {
 		return fmt.Errorf("创建视频记录失败: %w", err)
 	}
+	s.syncVideoReplicaBestEffort(video)
 	return nil
 }
 

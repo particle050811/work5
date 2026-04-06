@@ -10,15 +10,16 @@ import (
 )
 
 type RPCHandler struct {
-	store *repository.Store
+	store  *repository.Store
+	syncer service.UserReplicaSyncer
 }
 
-func NewRPCHandler(store *repository.Store) *RPCHandler {
-	return &RPCHandler{store: store}
+func NewRPCHandler(store *repository.Store, syncer service.UserReplicaSyncer) *RPCHandler {
+	return &RPCHandler{store: store, syncer: syncer}
 }
 
 func (h *RPCHandler) Register(ctx context.Context, req *userv1.RegisterRequest) (*userv1.RegisterResponse, error) {
-	svc := service.NewUserService(h.store)
+	svc := service.NewUserService(h.store, h.syncer)
 	result, err := svc.Register(ctx, req.GetUsername(), req.GetPassword())
 	if err != nil {
 		return nil, err
@@ -27,7 +28,7 @@ func (h *RPCHandler) Register(ctx context.Context, req *userv1.RegisterRequest) 
 }
 
 func (h *RPCHandler) Login(ctx context.Context, req *userv1.LoginRequest) (*userv1.LoginResponse, error) {
-	svc := service.NewUserService(h.store)
+	svc := service.NewUserService(h.store, h.syncer)
 	result, err := svc.Login(ctx, req.GetUsername(), req.GetPassword())
 	if err != nil {
 		return nil, err
@@ -40,7 +41,7 @@ func (h *RPCHandler) Login(ctx context.Context, req *userv1.LoginRequest) (*user
 }
 
 func (h *RPCHandler) RefreshToken(ctx context.Context, req *userv1.RefreshTokenRequest) (*userv1.RefreshTokenResponse, error) {
-	svc := service.NewUserService(h.store)
+	svc := service.NewUserService(h.store, h.syncer)
 	result, err := svc.RefreshToken(ctx, req.GetRefreshToken())
 	if err != nil {
 		return nil, err
@@ -52,7 +53,7 @@ func (h *RPCHandler) RefreshToken(ctx context.Context, req *userv1.RefreshTokenR
 }
 
 func (h *RPCHandler) GetUserInfo(ctx context.Context, req *userv1.GetUserInfoRequest) (*userv1.GetUserInfoResponse, error) {
-	svc := service.NewUserService(h.store)
+	svc := service.NewUserService(h.store, h.syncer)
 	user, err := svc.GetUserByID(ctx, uint(req.GetUserId()))
 	if err != nil {
 		return nil, err
@@ -61,7 +62,7 @@ func (h *RPCHandler) GetUserInfo(ctx context.Context, req *userv1.GetUserInfoReq
 }
 
 func (h *RPCHandler) UpdateAvatar(ctx context.Context, req *userv1.UpdateAvatarRequest) (*userv1.UpdateAvatarResponse, error) {
-	svc := service.NewUserService(h.store)
+	svc := service.NewUserService(h.store, h.syncer)
 	user, err := svc.UpdateAvatar(ctx, uint(req.GetUserId()), req.GetAvatarUrl())
 	if err != nil {
 		return nil, err
@@ -71,7 +72,7 @@ func (h *RPCHandler) UpdateAvatar(ctx context.Context, req *userv1.UpdateAvatarR
 
 func (h *RPCHandler) SyncUser(ctx context.Context, req *userv1.SyncUserRequest) (*userv1.SyncUserResponse, error) {
 	user := req.GetUser()
-	svc := service.NewUserService(h.store)
+	svc := service.NewUserService(h.store, h.syncer)
 	if err := svc.SyncUser(ctx, &model.User{
 		ID:        uint(user.GetId()),
 		Username:  user.GetUsername(),

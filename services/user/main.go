@@ -6,9 +6,13 @@ import (
 	"os"
 	"strings"
 
+	interactionclient "example.com/fanone/gen-rpc/kitex_gen/interaction/v1/interactionservice"
 	"example.com/fanone/gen-rpc/kitex_gen/user/v1/userservice"
+	videoclient "example.com/fanone/gen-rpc/kitex_gen/video/v1/videoservice"
 	"example.com/fanone/services/user/internal/handler"
 	"example.com/fanone/services/user/internal/repository"
+	"example.com/fanone/services/user/internal/syncer"
+	"github.com/cloudwego/kitex/client"
 	"github.com/cloudwego/kitex/pkg/rpcinfo"
 	"github.com/cloudwego/kitex/server"
 	"github.com/joho/godotenv"
@@ -35,9 +39,21 @@ func main() {
 	if err != nil {
 		log.Fatalf("初始化 etcd 注册中心失败: %v", err)
 	}
+	resolver, err := etcd.NewEtcdResolver(splitCSV(getEnv("ETCD_ENDPOINTS", "127.0.0.1:2379")))
+	if err != nil {
+		log.Fatalf("初始化 etcd 服务发现失败: %v", err)
+	}
+	videoCli, err := videoclient.NewClient("fanone.video", client.WithResolver(resolver))
+	if err != nil {
+		log.Fatalf("初始化 video-service 客户端失败: %v", err)
+	}
+	interactionCli, err := interactionclient.NewClient("fanone.interaction", client.WithResolver(resolver))
+	if err != nil {
+		log.Fatalf("初始化 interaction-service 客户端失败: %v", err)
+	}
 
 	svr := userservice.NewServer(
-		handler.NewRPCHandler(repository.GetStore()),
+		handler.NewRPCHandler(repository.GetStore(), syncer.NewUserReplicaSyncer(videoCli, interactionCli)),
 		server.WithServerBasicInfo(&rpcinfo.EndpointBasicInfo{ServiceName: userServiceName}),
 		server.WithServiceAddr(addr),
 		server.WithRegistry(reg),

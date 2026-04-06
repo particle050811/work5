@@ -13,12 +13,16 @@ import (
 
 // InteractionService 互动服务
 type InteractionService struct {
-	store *repository.Store
+	store       *repository.Store
+	videoSyncer VideoCounterSyncer
 }
 
 // NewInteractionService 创建互动服务实例
-func NewInteractionService(store *repository.Store) *InteractionService {
-	return &InteractionService{store: store}
+func NewInteractionService(store *repository.Store, videoSyncer VideoCounterSyncer) *InteractionService {
+	if videoSyncer == nil {
+		videoSyncer = noopVideoCounterSyncer{}
+	}
+	return &InteractionService{store: store, videoSyncer: videoSyncer}
 }
 
 // LikeActionType 点赞操作类型
@@ -99,6 +103,9 @@ func (s *InteractionService) LikeVideo(ctx context.Context, userID, videoID uint
 			log.Printf("[互动模块][点赞操作] 更新热榜缓存失败 video_id=%d: %v", videoID, err)
 		}
 	}
+	if likeDelta != 0 {
+		s.syncVideoCountersBestEffort(videoID, likeDelta, 0, "[互动模块][点赞操作] 同步视频计数失败 video_id=%d: %v")
+	}
 
 	return likeDelta, nil
 }
@@ -177,6 +184,7 @@ func (s *InteractionService) PublishComment(ctx context.Context, userID, videoID
 			log.Printf("[互动模块][发布评论] 更新热榜缓存失败 video_id=%d: %v", videoID, err)
 		}
 	}
+	s.syncVideoCountersBestEffort(videoID, 0, 1, "[互动模块][发布评论] 同步视频计数失败 video_id=%d: %v")
 
 	return nil
 }
@@ -222,6 +230,7 @@ func (s *InteractionService) DeleteComment(ctx context.Context, userID, commentI
 			log.Printf("[互动模块][删除评论] 更新热榜缓存失败 video_id=%d: %v", videoID, err)
 		}
 	}
+	s.syncVideoCountersBestEffort(videoID, 0, -1, "[互动模块][删除评论] 同步视频计数失败 video_id=%d: %v")
 
 	return videoID, nil
 }

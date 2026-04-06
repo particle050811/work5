@@ -13,12 +13,16 @@ import (
 
 // UserService 用户服务
 type UserService struct {
-	store *repository.Store
+	store  *repository.Store
+	syncer UserReplicaSyncer
 }
 
 // NewUserService 创建用户服务实例
-func NewUserService(store *repository.Store) *UserService {
-	return &UserService{store: store}
+func NewUserService(store *repository.Store, syncer UserReplicaSyncer) *UserService {
+	if syncer == nil {
+		syncer = noopUserReplicaSyncer{}
+	}
+	return &UserService{store: store, syncer: syncer}
 }
 
 // RegisterResult 注册结果
@@ -51,6 +55,7 @@ func (s *UserService) Register(ctx context.Context, username, password string) (
 	if err := db.CreateUser(s.store, user); err != nil {
 		return nil, fmt.Errorf("创建用户失败: %w", err)
 	}
+	s.syncUserReplicasBestEffort(user, "[用户模块][注册] 同步用户副本失败 user_id=%d: %v")
 
 	return &RegisterResult{User: user}, nil
 }
@@ -124,6 +129,7 @@ func (s *UserService) GetUserByID(ctx context.Context, userID uint) (*model.User
 	if user == nil {
 		return nil, ErrUserNotFound
 	}
+	s.syncUserReplicasBestEffort(user, "[用户模块][获取用户信息] 同步用户副本失败 user_id=%d: %v")
 	return user, nil
 }
 
@@ -137,6 +143,7 @@ func (s *UserService) UpdateAvatar(ctx context.Context, userID uint, avatarURL s
 	if err != nil {
 		return nil, fmt.Errorf("查询更新后的用户信息失败: %w", err)
 	}
+	s.syncUserReplicasBestEffort(user, "[用户模块][上传头像] 同步用户副本失败 user_id=%d: %v")
 	return user, nil
 }
 

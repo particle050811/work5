@@ -12,15 +12,16 @@ import (
 )
 
 type RPCHandler struct {
-	store *repository.Store
+	store  *repository.Store
+	syncer service.InteractionVideoSyncer
 }
 
-func NewRPCHandler(store *repository.Store) *RPCHandler {
-	return &RPCHandler{store: store}
+func NewRPCHandler(store *repository.Store, syncer service.InteractionVideoSyncer) *RPCHandler {
+	return &RPCHandler{store: store, syncer: syncer}
 }
 
 func (h *RPCHandler) CreateVideo(ctx context.Context, req *videov1.CreateVideoRequest) (*videov1.CreateVideoResponse, error) {
-	svc := service.NewVideoService(h.store)
+	svc := service.NewVideoService(h.store, h.syncer)
 	video := &model.Video{
 		UserID:      uint(req.GetUserId()),
 		VideoURL:    req.GetVideoUrl(),
@@ -36,7 +37,7 @@ func (h *RPCHandler) CreateVideo(ctx context.Context, req *videov1.CreateVideoRe
 
 func (h *RPCHandler) ListPublishedVideos(ctx context.Context, req *videov1.ListPublishedVideosRequest) (*videov1.ListPublishedVideosResponse, error) {
 	_, pageSize, offset := normalizePage(req.GetPageNum(), req.GetPageSize())
-	svc := service.NewVideoService(h.store)
+	svc := service.NewVideoService(h.store, h.syncer)
 	items, total, err := svc.ListVideosByUser(ctx, uint(req.GetUserId()), offset, pageSize)
 	if err != nil {
 		return nil, err
@@ -47,7 +48,7 @@ func (h *RPCHandler) ListPublishedVideos(ctx context.Context, req *videov1.ListP
 func (h *RPCHandler) SearchVideos(ctx context.Context, req *videov1.SearchVideosRequest) (*videov1.SearchVideosResponse, error) {
 	_, pageSize, offset := normalizePage(req.GetPageNum(), req.GetPageSize())
 	from, to := parseUnixRange(req.GetFromDate(), req.GetToDate())
-	svc := service.NewVideoService(h.store)
+	svc := service.NewVideoService(h.store, h.syncer)
 	items, total, err := svc.SearchVideos(ctx, service.SearchVideosParams{
 		Keywords:  strings.TrimSpace(req.GetKeywords()),
 		Username:  strings.TrimSpace(req.GetUsername()),
@@ -63,7 +64,7 @@ func (h *RPCHandler) SearchVideos(ctx context.Context, req *videov1.SearchVideos
 
 func (h *RPCHandler) GetHotVideos(ctx context.Context, req *videov1.GetHotVideosRequest) (*videov1.GetHotVideosResponse, error) {
 	_, pageSize, offset := normalizePage(req.GetPageNum(), req.GetPageSize())
-	svc := service.NewVideoService(h.store)
+	svc := service.NewVideoService(h.store, h.syncer)
 	items, total, err := svc.GetHotVideos(ctx, offset, pageSize)
 	if err != nil {
 		return nil, err
@@ -72,7 +73,7 @@ func (h *RPCHandler) GetHotVideos(ctx context.Context, req *videov1.GetHotVideos
 }
 
 func (h *RPCHandler) SyncUser(ctx context.Context, req *videov1.SyncUserRequest) (*videov1.SyncUserResponse, error) {
-	svc := service.NewVideoService(h.store)
+	svc := service.NewVideoService(h.store, h.syncer)
 	if err := svc.SyncUser(ctx, &model.User{
 		ID:        uint(req.GetId()),
 		Username:  req.GetUsername(),
@@ -84,7 +85,7 @@ func (h *RPCHandler) SyncUser(ctx context.Context, req *videov1.SyncUserRequest)
 }
 
 func (h *RPCHandler) SyncVideoCounters(ctx context.Context, req *videov1.SyncVideoCountersRequest) (*videov1.SyncVideoCountersResponse, error) {
-	svc := service.NewVideoService(h.store)
+	svc := service.NewVideoService(h.store, h.syncer)
 	if err := svc.SyncVideoCounters(ctx, uint(req.GetVideoId()), req.GetVisitDelta(), req.GetLikeDelta(), req.GetCommentDelta()); err != nil {
 		return nil, err
 	}
