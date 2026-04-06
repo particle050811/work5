@@ -356,7 +356,7 @@ message ListFriendsRequest {
 
 #### 好友的定义
 
-**好友 = 互相关注**（来源：`work4-api.md`）
+**好友 = 互相关注**（来源：统一接口文档 `https://doc.west2.online/`）
 
 ```
 我 ◀──关注──▶ 张三  → 张三是我的好友

@@ -1,257 +1,407 @@
-# FanOne 项目待办清单
+# FanOne Lab5 TODO
 
-最后更新：2026-04-05
+最后更新：2026-04-06
 
-本文档按“课程最高要求 + 简历可讲述性”整理，目标不是只把接口写完，而是把项目补到能答辩、能展示、能写进简历。
+本文档用于跟踪 `work5` 的开发任务，基线需求见 [work5-request.md](/home/particle/2025-2/west2onlie_GoWeb/work5/work5-request.md)。
 
-## 一、P0：本周必须完成
+当前已知现状：
 
-### 1. 社交模块功能闭环
+- 当前主分支仍为 `master`，尚未切换为 `main`
+- 当前仓库已有基础 CI：CodeQL、`golangci-lint`、`unit-test`
+- 根目录尚未看到 `.dockerignore`、`.editorconfig`、`.gitattributes`
+- 尚未看到独立 `config/` 目录与 `config.yaml`
+- 当前项目仍是单体结构，尚未进入微服务拆分
+- 当前项目尚未看到服务注册与发现基础设施
+- 现有 `interaction.proto` 仍保留“本次作业只需实现一级评论”的旧注释，需要按 Lab5 升级
+- 现有 `relation.proto` 仍未定义聊天相关 WebSocket / 历史消息能力
 
-- [x] 补齐社交模块 e2e 测试
-  - 文件：[test/relation.go](/home/particle/2025-2/west2onlie_GoWeb/work5/test/relation.go)
-  - 现状：仍是 TODO，占位未实现
+## P0：先完成能交付的 Lab5 核心需求
+
+### 0. 微服务改造方案先落地
+
+- [ ] 明确微服务拆分方案
+  - 最低建议：
+    - `gateway`
+    - `user-service`
+    - `video-service`
+    - `interaction-service`
+    - `chat-service`
+
+- [ ] 确定 RPC 技术栈
+  - 建议：对外 Hertz，对内 Kitex
+
+- [ ] 确定服务注册与发现方案
+  - 建议优先：`etcd`
   - 需要覆盖：
-    - 关注
-    - 重复关注幂等
-    - 取关
-    - 关注列表
-    - 粉丝列表
-    - 好友列表
-    - 不能关注自己
-    - 未登录访问好友列表的行为
+    - 服务注册
+    - 服务发现
+    - 本地开发启动方式
+    - Docker 部署方式
 
-- [x] 在测试入口串联社交流程
-  - 文件：[test/main.go](/home/particle/2025-2/west2onlie_GoWeb/work5/test/main.go)
-  - 目标：把“注册 -> 登录 -> 关注 -> 粉丝 -> 好友 -> 取关”加入完整流程
-
-### 2. 修复关注关系表未迁移问题
-
-- [x] 将 `Follow` 模型加入自动迁移
-  - 文件：[video-platform/biz/dal/store.go](/home/particle/2025-2/west2onlie_GoWeb/work5/video-platform/biz/dal/store.go)
-  - 关联模型：[video-platform/biz/dal/model/follow.go](/home/particle/2025-2/west2onlie_GoWeb/work5/video-platform/biz/dal/model/follow.go)
-  - 风险：新数据库环境下社交接口会直接失败
-
-### 3. 修复好友列表鉴权缺口
-
-- [x] 给好友列表路由挂载认证中间件
-  - 文件：[video-platform/biz/router/v1/middleware.go](/home/particle/2025-2/west2onlie_GoWeb/work5/video-platform/biz/router/v1/middleware.go)
-  - 问题：`ListFriends` 在 handler 里直接读取 JWT 中的 `user_id`，但路由没有鉴权
-  - 关联 handler：[video-platform/biz/handler/v1/relation_handler.go](/home/particle/2025-2/west2onlie_GoWeb/work5/video-platform/biz/handler/v1/relation_handler.go)
-
-### 4. 补齐 Docker 交付
-
-- [x] 新增 `Dockerfile`
-  - 目标：支持 `docker build` 和单容器运行
-  - 需要说明：
-    - `DB_DSN`
-    - `REDIS_ADDR`
-    - `REDIS_PASSWORD`
-    - `REDIS_DB`
-    - `JWT_SECRET`
-
-- [x] 补充运行说明
-  - 建议写入 README
-  - 至少包含：
-    - 本地启动
-    - 环境变量
-    - Docker 构建
-    - Docker 运行
-
-### 5. 补齐项目结构图
-
-- [x] 新增 README 或 `docs/architecture.md`
-  - 课程要求：需要有目录树，答辩时方便讲解
-  - 至少包含：
-    - 目录结构图
-    - 四层职责：router / handler / service / dal
-    - 存储目录说明
-    - Swagger 路径
-
-## 二、P1：补到“能答辩、能自圆其说”
-
-### 1. 修复 Redis 降级逻辑
-
-- [x] 让 Redis 连接失败时可降级，而不是直接退出
-  - 文件：[video-platform/biz/dal/redis.go](/home/particle/2025-2/west2onlie_GoWeb/work5/video-platform/biz/dal/redis.go)
-  - 当前问题：
-    - 未配置 `REDIS_ADDR` 会 `log.Fatal`
-    - Ping 失败也会 `log.Fatal`
+- [ ] 输出微服务目录重构方案
   - 目标：
-    - Redis 不可用时服务仍可启动
-    - 热榜接口回退到 DB 计算
-    - 日志中明确标记 Redis 降级
+    - 网关层和服务层边界清晰
+    - 公共 proto / config / pkg 不混乱
 
-- [x] 修正 `HasRedis()` 逻辑
-  - 文件：[video-platform/biz/dal/store.go](/home/particle/2025-2/west2onlie_GoWeb/work5/video-platform/biz/dal/store.go)
-  - 当前问题：固定返回 `true`
+- [ ] 先补一版架构文档
+  - 建议新增：
+    - `docs/architecture-microservices.md`
+    - `docs/service-discovery.md`
 
-### 2. 完整验证 17 个接口的协议一致性
+### 1. 更新 IDL，补齐 Lab5 协议
 
-- [x] 对照官方文档逐项核验请求参数、响应结构和错误码
-  - 参考：[work4-api.md](/home/particle/2025-2/west2onlie_GoWeb/work5/work4-api.md)
-  - 重点核验：
-    - 分页字段默认值与上限
-    - 评论删除权限
-    - 好友列表是否必须登录
-    - 搜索条件是否为 AND
-    - 热榜是否经过 Redis
+- [ ] 为用户模块补充 MFA 相关接口
+  - 建议文件：[video-platform/api/video/v1/user.proto](/home/particle/2025-2/west2onlie_GoWeb/work5/video-platform/api/video/v1/user.proto)
+  - 最低应包含：
+    - 获取 MFA 二维码
+    - 绑定 MFA
 
-### 3. 补日志中间件
+- [ ] 为视频模块补充视频流接口
+  - 建议文件：[video-platform/api/video/v1/video.proto](/home/particle/2025-2/west2onlie_GoWeb/work5/video-platform/api/video/v1/video.proto)
+  - 最低应明确：
+    - 视频流读取方式
+    - Range / 分片读取策略
+    - 返回头设计
 
-- [x] 增加请求日志
-  - 建议位置：[video-platform/biz/router/v1/middleware.go](/home/particle/2025-2/west2onlie_GoWeb/work5/video-platform/biz/router/v1/middleware.go)
-  - 目标字段：
-    - request_id
-    - method
-    - path
-    - user_id
-    - status_code
-    - cost_ms
+- [ ] 为互动模块补齐“评论回复 + 评论点赞”协议
+  - 当前文件：[video-platform/api/video/v1/interaction.proto](/home/particle/2025-2/west2onlie_GoWeb/work5/video-platform/api/video/v1/interaction.proto)
+  - 当前问题：
+    - 仍写着“本次作业只需实现一级评论”
+    - 只有视频点赞，没有评论点赞
+    - `PublishCommentRequest` 缺少 `comment_id` / `parent_id` 语义
 
-- [x] 统一 handler 层错误日志格式
-  - 要求：遵循 AGENTS.md 中的 `[模块名][操作名] 错误描述 关键参数: %v`
-  - 核查对象：
-    - 用户模块
-    - 视频模块
-    - 互动模块
-    - 社交模块
+- [ ] 为社交模块补充聊天协议
+  - 当前文件：[video-platform/api/video/v1/relation.proto](/home/particle/2025-2/west2onlie_GoWeb/work5/video-platform/api/video/v1/relation.proto)
+  - 最低应明确：
+    - 建立聊天连接
+    - 消息结构
+    - 历史消息拉取或离线补偿策略
+    - AI 消息与普通用户消息如何区分
 
-### 4. 完整回归测试
+- [ ] 执行代码生成并同步更新 Swagger
+  - 相关目录：
+    - [video-platform/biz/model/api](/home/particle/2025-2/west2onlie_GoWeb/work5/video-platform/biz/model/api)
+    - [video-platform/swagger](/home/particle/2025-2/west2onlie_GoWeb/work5/video-platform/swagger)
+  - 注意：
+    - 带 `Code generated` 标记的文件只能通过生成命令更新
 
-- [x] 每次修改后执行完整 e2e
-  - 流程：
-    - 启动服务
-    - 跑 `test/`
-    - 校验所有用例通过
+### 2. 实现 WebSocket 聊天主链路
 
-- [x] 增加异常场景测试
-  - 未登录访问受保护接口
-  - 参数缺失
-  - 非法 ID
-  - 重复点赞
-  - 重复关注
-  - 删除他人评论
+- [ ] 设计聊天数据模型
+  - 建议新增：
+    - `conversation`
+    - `message`
+    - 可选 `conversation_member`
+  - 建议目录：[video-platform/biz/dal/model](/home/particle/2025-2/west2onlie_GoWeb/work5/video-platform/biz/dal/model)
 
-### 5. 单元测试补齐
+- [ ] 设计聊天持久化与实时投递方案
+  - 要求：`Redis + MySQL`
+  - 最低建议：
+    - MySQL 存历史消息
+    - Redis 做在线路由、消息分发、未读或会话缓存
+    - 聊天服务独立为 `chat-service`
 
-- [x] 为 `pkg` 与 `biz/service` 补齐核心单元测试
-  - 已完成：
-    - JWT 生成、校验、刷新
-    - 密码哈希与校验
-    - 统一响应封装
-    - 认证中间件与请求日志中间件
-    - 用户注册/登录/刷新令牌
-    - 点赞、评论、删除评论
-    - 关注、取关、好友列表
+- [ ] 基于 Hertz WebSocket 实现聊天 handler
+  - 建议目录：[video-platform/biz/handler/v1](/home/particle/2025-2/west2onlie_GoWeb/work5/video-platform/biz/handler/v1)
+  - 建议内容：
+    - 建链鉴权
+    - 心跳保活
+    - 用户上线/下线
+    - 消息发送与广播
 
-## 三、P2：加分项
+- [ ] 实现聊天 service
+  - 建议目录：[video-platform/biz/service](/home/particle/2025-2/west2onlie_GoWeb/work5/video-platform/biz/service)
+  - 最低应覆盖：
+    - 创建会话
+    - 保存消息
+    - 投递消息
+    - 离线消息或历史消息读取
 
-### 1. 把热榜做得更像真实业务
+- [ ] 增加聊天相关 e2e / 集成测试
+  - 建议新增：[test/relation_ws.go](/home/particle/2025-2/west2onlie_GoWeb/work5/test/relation_ws.go)
+  - 最低覆盖：
+    - 两个用户建链
+    - 互发消息
+    - AI 插入回复
 
-- [x] 为 Redis 热榜补齐防击穿策略
-  - 随机 TTL
-  - 空结果保护
-  - rebuild 锁
+### 3. 实现 MFA
 
-- [x] 将热度计算抽成独立函数
-  - 当前规则：`like_count * 3 + comment_count * 2 + visit_count`
-  - 目标：便于后续扩展播放量、发布时间衰减
+- [ ] 扩展用户表结构，增加 MFA 状态字段
+  - 建议文件：
+    - [video-platform/biz/dal/model/user.go](/home/particle/2025-2/west2onlie_GoWeb/work5/video-platform/biz/dal/model/user.go)
+    - [video-platform/biz/dal/store.go](/home/particle/2025-2/west2onlie_GoWeb/work5/video-platform/biz/dal/store.go)
 
-### 2. 提升工程化程度
+- [ ] 生成并返回 MFA 二维码
+  - 建议落点：[video-platform/biz/service/user_service.go](/home/particle/2025-2/west2onlie_GoWeb/work5/video-platform/biz/service/user_service.go)
 
-- [x] 增加 `.env.example` 完整字段注释
-- [x] 补一键初始化脚本
-- [x] 补 `make` 或脚本命令说明
-- [x] 补接口调用示例
+- [ ] 实现 MFA 绑定与校验逻辑
+  - 最低应明确：
+    - 绑定前提
+    - 验证码校验
+    - 绑定后的登录流程是否升级为二次校验
 
-### 3. 选做一个高质量 Bonus
+- [ ] 增加 MFA 测试
+  - 建议新增：
+    - 单测：`pkg` 或 `service`
+    - e2e：`test/user.go`
 
-- [ ] 分片上传
-  - 适合强调文件服务和断点续传设计
+### 4. 实现视频流
 
-- [ ] WebSocket 通知/聊天
-  - 适合强调实时通信能力
+- [ ] 为视频文件提供流式读取能力
+  - 建议文件：[video-platform/biz/handler/v1/video_handler.go](/home/particle/2025-2/west2onlie_GoWeb/work5/video-platform/biz/handler/v1/video_handler.go)
 
-- [ ] Elasticsearch / OpenSearch
-  - 可用于日志检索或视频搜索增强
+- [ ] 支持浏览器常见的 Range 请求
+  - 目标：
+    - 能够拖动进度条
+    - 能正确返回 `206 Partial Content`
 
-说明：三选一即可，不建议同时铺太开。
+- [ ] 增加视频流测试
+  - 建议覆盖：
+    - 整文件读取
+    - Range 分段读取
+    - 非法范围
 
-## 四、简历亮点提炼
+### 5. 补齐评论回复与评论点赞
 
-以下内容建议在项目完成后写入简历，避免先写上去但实际答不出来。
+- [ ] 扩展评论表结构，支持父子评论
+  - 建议文件：[video-platform/biz/dal/model](/home/particle/2025-2/west2onlie_GoWeb/work5/video-platform/biz/dal/model)
 
-### 1. 可直接写进简历的亮点
+- [ ] 扩展点赞模型，支持视频与评论两类目标
+  - 要点：
+    - 幂等
+    - 目标类型区分
+    - 计数更新一致性
 
-- [ ] 基于 Hertz + Protobuf + `hz` 脚手架实现视频平台后端，完成用户、视频、互动、社交四大模块与 17+ 核心 API
-- [ ] 基于 JWT 实现双 Token 认证体系，支持 Access Token 鉴权与 Refresh Token 刷新
-- [ ] 基于 MySQL + GORM 完成用户、视频、评论、点赞、关注关系建模，支持分页、幂等、软删除与权限控制
-- [ ] 基于 Redis 实现热门排行榜缓存，并在点赞、评论写路径上进行热度增量更新
-- [ ] 支持头像与视频文件上传，完成静态资源访问链路
-- [ ] 提供 Swagger/OpenAPI 文档、e2e 测试和 Docker 化部署能力
+- [ ] 重写互动模块测试
+  - 当前文件：[test/interaction.go](/home/particle/2025-2/west2onlie_GoWeb/work5/test/interaction.go)
+  - 最低应覆盖：
+    - 对视频评论
+    - 对评论回复
+    - 对评论点赞
+    - 删除他人评论失败
 
-### 2. 推荐简历描述
+## P1：补齐工程要求，避免答辩失分
 
-#### 一句话版本
+### 0. 微服务基础设施
 
-- [ ] 独立完成基于 Hertz/Protobuf/Redis/MySQL 的视频平台后端开发，设计并实现双 Token 认证、热榜缓存、社交关系、文件上传和 17+ 核心 API。
+- [ ] 为各服务拆分独立启动入口
+  - 建议结构：
+    - `cmd/gateway`
+    - `cmd/user-service`
+    - `cmd/video-service`
+    - `cmd/interaction-service`
+    - `cmd/chat-service`
 
-#### 两句话版本
+- [ ] 为各服务拆分配置文件
+  - 最低要求：
+    - 服务级配置
+    - 公共基础设施配置
 
-- [ ] 负责视频平台后端架构设计与核心功能开发，基于 Hertz + Protobuf + GORM + Redis 实现用户、视频、互动、社交四大模块，完成注册登录、投稿、搜索、点赞评论、关注好友等 17+ API。
-- [ ] 重点解决 JWT 双 Token 鉴权、社交关系建模、幂等写操作、Redis 热榜缓存一致性等问题，并补充 e2e 测试、Swagger 文档和 Docker 化部署。
+- [ ] 为服务间调用定义公共 proto / kitex idl
+  - 避免 HTTP DTO 直接充当内部 RPC 协议
 
-## 五、答辩与面试要重点讲的难点
+- [ ] 接入服务注册与发现
+  - 最低应验证：
+    - 服务启动自动注册
+    - 网关可动态发现下游服务
+    - 下游实例变更后无需硬编码改地址
 
-### 1. 双 Token 鉴权
+- [ ] 设计服务间超时、重试、降级策略
+  - 尤其关注：
+    - 网关 -> 用户服务
+    - 网关 -> 视频服务
+    - 网关 -> 互动服务
+    - 网关 -> 聊天服务
 
-- [ ] 为什么要拆成 Access Token 和 Refresh Token
-- [ ] 如何控制有效期
-- [ ] 为什么刷新接口不能直接复用访问令牌
-- [ ] 中间件如何解析并注入用户身份
+### 1. 分支与 PR 流程
 
-### 2. 社交关系建模
+- [ ] 将主分支从 `master` 切换为 `main`
+- [ ] 配置 GitHub 仓库保护，禁止直接推送主分支
+- [ ] 后续变更改为 PR 合并
+- [ ] 约定 PR 标题规范，并在文档中写明
 
-- [ ] 关注、粉丝、好友三种列表的 SQL 语义不同
-- [ ] 好友本质是互相关注，不是单独一张好友表
-- [ ] 为什么需要软删除支持“取关后再关注”
+### 2. 补齐仓库工程文件
 
-### 3. 幂等与事务
+- [ ] 新增 [.dockerignore](/home/particle/2025-2/west2onlie_GoWeb/work5/.dockerignore)
+- [ ] 新增 [.editorconfig](/home/particle/2025-2/west2onlie_GoWeb/work5/.editorconfig)
+- [ ] 新增 [.gitattributes](/home/particle/2025-2/west2onlie_GoWeb/work5/.gitattributes)
+- [ ] 检查 [.gitignore](/home/particle/2025-2/west2onlie_GoWeb/work5/.gitignore) 是否足够覆盖构建产物、临时文件、上传文件
 
-- [ ] 重复点赞不能重复加数
-- [ ] 重复关注不能重复加数
-- [ ] 取消点赞和删除评论时要同步维护统计字段
-- [ ] 为什么“关系表 + 计数表”必须放在一个事务里
+### 3. 配置治理
 
-### 4. 热榜缓存一致性
+- [ ] 新增 `config/` 目录
+  - 建议结构：
+    - `config/config.yaml`
+    - `config/sql/init.sql`
+    - `config/services/*.yaml`
 
-- [ ] 为什么读缓存、写数据库、增量更新缓存会出现不一致
-- [ ] 为什么需要缓存重建机制
-- [ ] Redis 不可用时如何降级
+- [ ] 接入 Viper 并支持配置热更新
+  - 最低要求：
+    - 服务端能感知配置变更
+    - 热更新日志明确可见
 
-### 5. 搜索和分页
+- [ ] 清理散落的硬编码配置
+  - 重点关注：
+    - JWT 配置
+    - Redis 配置
+    - 上传目录
+    - 限流阈值
+    - AI / MCP 配置
 
-- [ ] 搜索为什么必须是 AND 条件
-- [ ] 分页为什么要做默认值与上限保护
-- [ ] 为什么 `page_num` 必须从 1 开始
+### 4. 参数校验与错误处理
 
-## 六、建议执行顺序
+- [ ] 为核心接口补齐参数校验
+  - 重点文件：
+    - [video-platform/api/video/v1](/home/particle/2025-2/west2onlie_GoWeb/work5/video-platform/api/video/v1)
+    - [video-platform/biz/handler/v1](/home/particle/2025-2/west2onlie_GoWeb/work5/video-platform/biz/handler/v1)
 
-1. 先修 `Follow` 迁移和好友列表鉴权，确保社交接口真实可用。
-2. 再补 `test/relation.go` 与 `test/main.go`，把社交模块纳入 e2e。
-3. 接着补 `Dockerfile`、README、目录结构图，完成课程交付。
-4. 然后修 Redis 降级和日志中间件，把项目补到“能讲工程质量”的层级。
-5. 最后再选一个 Bonus 做深，不要摊大饼。
+- [ ] 统一错误处理链路
+  - 目标：
+    - 返回错误码稳定
+    - 日志格式符合 AGENTS.md
+    - 避免 handler / service 重复打日志
 
-## 七、完成定义
+### 5. 流量治理
 
-满足以下条件时，可认为项目达到了“课程高质量交付 + 简历可写”标准：
+- [ ] 接入 Sentinel
+  - 至少覆盖：
+    - 视频流接口
+    - 聊天连接
+    - 登录相关接口
+    - 网关到下游服务的关键入口
 
-- [ ] 17 个核心接口全部实测通过
-- [ ] 社交模块 e2e 已补齐
-- [ ] Docker 可成功构建并运行
-- [ ] README 含项目结构图、启动说明、技术选型
-- [ ] Redis 热榜支持缓存与降级
-- [ ] 日志、鉴权、分页、权限控制逻辑完整
-- [ ] 能用 3 到 5 分钟清楚讲明项目架构、亮点和难点
+- [ ] 提供自定义治理配置
+  - 包括：
+    - 限流
+    - 熔断或降级
+    - 可观测日志
+
+### 6. 代码复用与常量治理
+
+- [ ] 清理重复分页逻辑
+- [ ] 清理重复鉴权上下文读取逻辑
+- [ ] 清理重复响应构造逻辑
+- [ ] 抽取常量包
+  - 至少管理：
+    - action type
+    - 业务状态值
+    - Redis key 前缀
+    - 错误文案
+    - 默认分页参数
+
+## P2：完善测试、CI 与文档
+
+### 1. 单元测试
+
+- [ ] 为新增聊天 service 增加单测
+- [ ] 为 MFA 增加单测
+- [ ] 为视频流边界场景增加单测
+- [ ] 为评论回复 / 评论点赞增加单测
+- [ ] 统计并记录测试覆盖率
+
+### 2. CI 完善
+
+- [ ] 检查 [golangci-lint workflow](/home/particle/2025-2/west2onlie_GoWeb/work5/.github/workflows/golangci-lint.yml) 是否只监听 `main`
+- [ ] 检查 [unit-test workflow](/home/particle/2025-2/west2onlie_GoWeb/work5/.github/workflows/unit-test.yml) 是否覆盖 `video-platform` 与 `test`
+- [ ] 检查 [codeql workflow](/home/particle/2025-2/west2onlie_GoWeb/work5/.github/workflows/codeql.yml) 的扫描路径是否正确
+- [ ] 视情况增加构建检查，确保 proto 更新后能成功编译
+- [ ] 新增微服务构建检查
+  - 最低要求：
+    - gateway 可编译
+    - 各服务可编译
+    - kitex 生成代码与仓库保持一致
+
+### 3. README 与部署文档
+
+- [ ] 精简 [video-platform/README.md](/home/particle/2025-2/west2onlie_GoWeb/work5/video-platform/README.md)
+  - 目标：
+    - README 保持项目概览
+    - 细节下沉到 `docs/`
+
+- [ ] 新增 `docs/` 目录
+  - 建议拆分：
+    - `docs/architecture.md`
+    - `docs/architecture-microservices.md`
+    - `docs/deploy.md`
+    - `docs/chat-design.md`
+    - `docs/cache-flow.md`
+    - `docs/service-discovery.md`
+
+- [ ] 补缓存流程图
+  - 至少覆盖：
+    - 热榜缓存
+    - 聊天中 Redis 的使用路径
+
+- [ ] 补部署文档
+  - 最低包含：
+    - 本地部署
+    - Docker 部署
+    - 服务器部署
+    - 环境变量说明
+    - 注册中心部署
+    - 多服务启动顺序
+
+- [ ] 在 README 中附上飞书报告链接
+
+### 4. 报告材料
+
+- [ ] 按 Lab5 要求编写答辩报告
+  - 必含：
+    - Problem Restatement
+    - 问题解决
+    - 单测覆盖率
+    - 单元测试学习笔记
+    - 单体 vs 微服务对比
+    - 服务注册与发现设计说明
+
+- [ ] 在报告中单独说明“代码复用性改动”
+
+- [ ] 在报告中展示至少一组“优化前 / 优化后”
+  - 可选主题：
+    - 缓存
+    - 数据库结构
+    - 并发处理
+
+## P3：可选但很加分
+
+### 1. AI 聊天增强
+
+- [ ] 为聊天接入 AI 自动回复
+- [ ] 设计 AI 触发策略
+- [ ] 接入 tool call
+- [ ] 评估并接入 MCP
+- [ ] 如接入福 uu tool，补充 jwch 授权接口
+
+### 2. 异步化与性能优化
+
+- [ ] 评估点赞、消息通知等是否可异步化
+- [ ] 评估引入消息队列
+- [ ] 为聊天系统补 Benchmark
+
+### 3. 安全与治理增强
+
+- [ ] 评估聊天链路的安全性
+- [ ] 补充更多审计日志
+- [ ] 预留可观测性扩展位
+  - 可选：
+    - Prometheus
+    - Jaeger
+    - 结构化日志
+
+## 建议开发顺序
+
+1. 先改 proto，统一协议与生成代码。
+2. 先确定微服务拆分、Kitex、注册发现方案，再开始搬迁代码。
+3. 再做聊天、MFA、视频流三个新增能力。
+4. 同步补互动模块的评论回复和评论点赞，避免旧逻辑拖后腿。
+5. 再补 `config/`、参数校验、Sentinel、工程文件。
+6. 最后集中整理 README、部署文档、流程图和答辩报告。
+
+## 每轮提交前检查
+
+- [ ] `go test ./...` 通过
+- [ ] `test/` e2e 通过
+- [ ] `golangci-lint` 本地通过
+- [ ] Swagger / proto 生成文件已同步
+- [ ] README / docs / 报告同步更新
+- [ ] PR 标题清晰可读
