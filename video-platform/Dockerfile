@@ -20,11 +20,10 @@ WORKDIR /app
 
 RUN apk add --no-cache ca-certificates tzdata
 
-COPY --from=builder /out/fanone-video /app/fanone-video
-COPY --from=builder /out/storage /app/storage
+RUN addgroup -S app && adduser -S -G app app
 
-RUN addgroup -S app && adduser -S -G app app \
-    && chown -R app:app /app
+COPY --from=builder --chown=app:app /out/fanone-video /app/fanone-video
+COPY --from=builder --chown=app:app /out/storage /app/storage
 
 USER app
 
