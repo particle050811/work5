@@ -2,6 +2,7 @@ package repository
 
 import (
 	"example.com/fanone/services/video/internal/repository/db"
+	"example.com/fanone/services/video/internal/repository/model"
 	"gorm.io/gorm"
 )
 
@@ -15,8 +16,13 @@ var defaultStore *Store
 
 // Init 初始化 Store（在 main.go 中调用）
 func Init() {
+	mysqlDB := db.InitMySQL()
+	if err := mysqlDB.AutoMigrate(&model.User{}, &model.Video{}); err != nil {
+		panic(err)
+	}
+
 	defaultStore = &Store{
-		db:    db.InitMySQL(),
+		db:    mysqlDB,
 		redis: initRedis(), // 失败返回 nil，不 panic
 	}
 }

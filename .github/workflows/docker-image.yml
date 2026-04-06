@@ -59,7 +59,7 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
-          file: ./Dockerfile
+          file: ./services/gateway/Dockerfile
           push: ${{ github.event_name != 'pull_request' }}
           tags: particle050811/fanone-video:${{ github.sha }}
           cache-from: type=gha
