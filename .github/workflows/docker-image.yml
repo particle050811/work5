@@ -6,7 +6,6 @@ on:
       - main
       - master
     paths:
-      - "Dockerfile"
       - ".dockerignore"
       - "go.mod"
       - "go.sum"
@@ -20,7 +19,6 @@ on:
       - ".github/workflows/docker-image.yml"
   pull_request:
     paths:
-      - "Dockerfile"
       - ".dockerignore"
       - "go.mod"
       - "go.sum"
