@@ -14,8 +14,6 @@ export JWT_SECRET="${JWT_SECRET:-fanone-microservices-secret-key-2024}"
 export MYSQL_ROOT_PASSWORD="${MYSQL_ROOT_PASSWORD:-hsr123456}"
 export REDIS_PASSWORD="${REDIS_PASSWORD:-}"
 export REDIS_DB="${REDIS_DB:-0}"
-export HOST_MYSQL_PORT="${HOST_MYSQL_PORT:-3306}"
-export HOST_REDIS_PORT="${HOST_REDIS_PORT:-6379}"
 
 compose() {
   if docker compose version >/dev/null 2>&1; then
@@ -38,41 +36,13 @@ port_in_use() {
   ss -ltn "( sport = :$port )" | grep -q LISTEN
 }
 
-RESERVED_PORTS=""
-
-port_reserved() {
-  local port="$1"
-  [[ " $RESERVED_PORTS " == *" $port "* ]]
-}
-
-reserve_port() {
-  local port="$1"
-  if ! port_reserved "$port"; then
-    RESERVED_PORTS="$RESERVED_PORTS $port"
+ensure_port_available() {
+  local name="$1"
+  local port="$2"
+  if port_in_use "$port"; then
+    echo "[dev-up] 端口已被占用 name=$name port=$port" >&2
+    exit 1
   fi
-}
-
-choose_port() {
-  local preferred="$1"
-  local fallback="$2"
-  local port
-
-  for port in "$preferred" "$fallback"; do
-    if ! port_in_use "$port" && ! port_reserved "$port"; then
-      echo "$port"
-      return
-    fi
-  done
-
-  for port in $(seq "$fallback" $((fallback + 50))); do
-    if ! port_in_use "$port" && ! port_reserved "$port"; then
-      echo "$port"
-      return
-    fi
-  done
-
-  echo "[dev-up] 无法找到可用端口 preferred=$preferred fallback=$fallback" >&2
-  exit 1
 }
 
 wait_for_health() {
@@ -122,20 +92,21 @@ escape_env_value() {
   printf '"%s"' "$value"
 }
 
-ETCD_HOST_PORT="${ETCD_HOST_PORT:-$(choose_port 2379 22379)}"
-reserve_port "$ETCD_HOST_PORT"
-GATEWAY_HTTP_PORT="${GATEWAY_HTTP_PORT:-$(choose_port 8888 18888)}"
-reserve_port "$GATEWAY_HTTP_PORT"
-CHAT_HTTP_PORT="${CHAT_HTTP_PORT:-$(choose_port 8889 18889)}"
-reserve_port "$CHAT_HTTP_PORT"
+ETCD_HOST_PORT="${ETCD_HOST_PORT:-22379}"
+GATEWAY_HTTP_PORT="${GATEWAY_HTTP_PORT:-18888}"
+CHAT_HTTP_PORT="${CHAT_HTTP_PORT:-18889}"
 
-export ETCD_HOST_PORT HOST_MYSQL_PORT HOST_REDIS_PORT
+ensure_port_available "etcd" "$ETCD_HOST_PORT"
+ensure_port_available "gateway" "$GATEWAY_HTTP_PORT"
+ensure_port_available "chat-service" "$CHAT_HTTP_PORT"
+
+export ETCD_HOST_PORT
 export GATEWAY_HTTP_PORT CHAT_HTTP_PORT
 
-export USER_DB_DSN="${USER_DB_DSN:-root:${MYSQL_ROOT_PASSWORD}@tcp(127.0.0.1:${HOST_MYSQL_PORT})/fanone_user?charset=utf8mb4&parseTime=True&loc=Local}"
-export VIDEO_DB_DSN="${VIDEO_DB_DSN:-root:${MYSQL_ROOT_PASSWORD}@tcp(127.0.0.1:${HOST_MYSQL_PORT})/fanone_video?charset=utf8mb4&parseTime=True&loc=Local}"
-export INTERACTION_DB_DSN="${INTERACTION_DB_DSN:-root:${MYSQL_ROOT_PASSWORD}@tcp(127.0.0.1:${HOST_MYSQL_PORT})/fanone_interaction?charset=utf8mb4&parseTime=True&loc=Local}"
-export REDIS_ADDR="${REDIS_ADDR:-127.0.0.1:${HOST_REDIS_PORT}}"
+export USER_DB_DSN="${USER_DB_DSN:-root:${MYSQL_ROOT_PASSWORD}@tcp(127.0.0.1:3306)/fanone_user?charset=utf8mb4&parseTime=True&loc=Local}"
+export VIDEO_DB_DSN="${VIDEO_DB_DSN:-root:${MYSQL_ROOT_PASSWORD}@tcp(127.0.0.1:3306)/fanone_video?charset=utf8mb4&parseTime=True&loc=Local}"
+export INTERACTION_DB_DSN="${INTERACTION_DB_DSN:-root:${MYSQL_ROOT_PASSWORD}@tcp(127.0.0.1:3306)/fanone_interaction?charset=utf8mb4&parseTime=True&loc=Local}"
+export REDIS_ADDR="${REDIS_ADDR:-127.0.0.1:6379}"
 export ETCD_ENDPOINTS="${ETCD_ENDPOINTS:-127.0.0.1:${ETCD_HOST_PORT}}"
 export BASE_URL="http://localhost:${GATEWAY_HTTP_PORT}"
 export CHAT_BASE_URL="http://localhost:${CHAT_HTTP_PORT}"
@@ -159,8 +130,6 @@ wait_for_http "chat-service" "$CHAT_BASE_URL/ping"
   printf "COMPOSE_PROJECT_NAME=%s\n" "$(escape_env_value "$COMPOSE_PROJECT_NAME")"
   printf "ETCD_ENDPOINTS=%s\n" "$(escape_env_value "$ETCD_ENDPOINTS")"
   printf "MYSQL_ROOT_PASSWORD=%s\n" "$(escape_env_value "$MYSQL_ROOT_PASSWORD")"
-  printf "HOST_MYSQL_PORT=%s\n" "$(escape_env_value "$HOST_MYSQL_PORT")"
-  printf "HOST_REDIS_PORT=%s\n" "$(escape_env_value "$HOST_REDIS_PORT")"
   printf "USER_DB_DSN=%s\n" "$(escape_env_value "$USER_DB_DSN")"
   printf "VIDEO_DB_DSN=%s\n" "$(escape_env_value "$VIDEO_DB_DSN")"
   printf "INTERACTION_DB_DSN=%s\n" "$(escape_env_value "$INTERACTION_DB_DSN")"

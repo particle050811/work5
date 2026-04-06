@@ -6,7 +6,7 @@ x-service-common: &service-common
     - "host.docker.internal:host-gateway"
   environment:
     ETCD_ENDPOINTS: etcd:2379
-    REDIS_ADDR: host.docker.internal:${HOST_REDIS_PORT:-6379}
+    REDIS_ADDR: host.docker.internal:6379
     REDIS_PASSWORD: ""
     REDIS_DB: "0"
     JWT_SECRET: ${JWT_SECRET:-fanone-microservices-secret-key-2024}
@@ -47,12 +47,12 @@ services:
     image: fanone/user-service:local
     environment:
       ETCD_ENDPOINTS: etcd:2379
-      REDIS_ADDR: host.docker.internal:${HOST_REDIS_PORT:-6379}
+      REDIS_ADDR: host.docker.internal:6379
       REDIS_PASSWORD: ""
       REDIS_DB: "0"
       JWT_SECRET: ${JWT_SECRET:-fanone-microservices-secret-key-2024}
       USER_RPC_ADDR: 0.0.0.0:9001
-      USER_DB_DSN: root:${MYSQL_ROOT_PASSWORD:-hsr123456}@tcp(host.docker.internal:${HOST_MYSQL_PORT:-3306})/fanone_user?charset=utf8mb4&parseTime=True&loc=Local
+      USER_DB_DSN: root:${MYSQL_ROOT_PASSWORD:-hsr123456}@tcp(host.docker.internal:3306)/fanone_user?charset=utf8mb4&parseTime=True&loc=Local
 
   video-service:
     <<: *service-common
@@ -63,12 +63,12 @@ services:
     image: fanone/video-service:local
     environment:
       ETCD_ENDPOINTS: etcd:2379
-      REDIS_ADDR: host.docker.internal:${HOST_REDIS_PORT:-6379}
+      REDIS_ADDR: host.docker.internal:6379
       REDIS_PASSWORD: ""
       REDIS_DB: "0"
       JWT_SECRET: ${JWT_SECRET:-fanone-microservices-secret-key-2024}
       VIDEO_RPC_ADDR: 0.0.0.0:9002
-      VIDEO_DB_DSN: root:${MYSQL_ROOT_PASSWORD:-hsr123456}@tcp(host.docker.internal:${HOST_MYSQL_PORT:-3306})/fanone_video?charset=utf8mb4&parseTime=True&loc=Local
+      VIDEO_DB_DSN: root:${MYSQL_ROOT_PASSWORD:-hsr123456}@tcp(host.docker.internal:3306)/fanone_video?charset=utf8mb4&parseTime=True&loc=Local
 
   interaction-service:
     <<: *service-common
@@ -79,12 +79,12 @@ services:
     image: fanone/interaction-service:local
     environment:
       ETCD_ENDPOINTS: etcd:2379
-      REDIS_ADDR: host.docker.internal:${HOST_REDIS_PORT:-6379}
+      REDIS_ADDR: host.docker.internal:6379
       REDIS_PASSWORD: ""
       REDIS_DB: "0"
       JWT_SECRET: ${JWT_SECRET:-fanone-microservices-secret-key-2024}
       INTERACTION_RPC_ADDR: 0.0.0.0:9003
-      INTERACTION_DB_DSN: root:${MYSQL_ROOT_PASSWORD:-hsr123456}@tcp(host.docker.internal:${HOST_MYSQL_PORT:-3306})/fanone_interaction?charset=utf8mb4&parseTime=True&loc=Local
+      INTERACTION_DB_DSN: root:${MYSQL_ROOT_PASSWORD:-hsr123456}@tcp(host.docker.internal:3306)/fanone_interaction?charset=utf8mb4&parseTime=True&loc=Local
 
   chat-service:
     <<: *service-common
@@ -95,7 +95,7 @@ services:
     image: fanone/chat-service:local
     environment:
       ETCD_ENDPOINTS: etcd:2379
-      REDIS_ADDR: host.docker.internal:${HOST_REDIS_PORT:-6379}
+      REDIS_ADDR: host.docker.internal:6379
       REDIS_PASSWORD: ""
       REDIS_DB: "0"
       JWT_SECRET: ${JWT_SECRET:-fanone-microservices-secret-key-2024}
@@ -113,7 +113,7 @@ services:
     image: fanone/gateway:local
     environment:
       ETCD_ENDPOINTS: etcd:2379
-      REDIS_ADDR: host.docker.internal:${HOST_REDIS_PORT:-6379}
+      REDIS_ADDR: host.docker.internal:6379
       REDIS_PASSWORD: ""
       REDIS_DB: "0"
       JWT_SECRET: ${JWT_SECRET:-fanone-microservices-secret-key-2024}
