@@ -1,0 +1,164 @@
+version: "3.9"
+
+x-service-common: &service-common
+  restart: unless-stopped
+  environment:
+    ETCD_ENDPOINTS: etcd:2379
+    REDIS_ADDR: redis:6379
+    REDIS_PASSWORD: ""
+    REDIS_DB: "0"
+    JWT_SECRET: ${JWT_SECRET:-fanone-microservices-secret-key-2024}
+  depends_on:
+    etcd:
+      condition: service_healthy
+    redis:
+      condition: service_healthy
+
+services:
+  etcd:
+    image: quay.io/coreos/etcd:v3.5.14
+    restart: unless-stopped
+    environment:
+      ETCD_LISTEN_CLIENT_URLS: http://0.0.0.0:2379
+      ETCD_ADVERTISE_CLIENT_URLS: http://etcd:2379
+      ETCD_LISTEN_PEER_URLS: http://0.0.0.0:2380
+      ETCD_INITIAL_ADVERTISE_PEER_URLS: http://etcd:2380
+      ETCD_INITIAL_CLUSTER: default=http://etcd:2380
+      ETCD_NAME: default
+      ETCD_INITIAL_CLUSTER_TOKEN: fanone-etcd
+      ETCD_INITIAL_CLUSTER_STATE: new
+      ETCDCTL_API: "3"
+    command:
+      - /usr/local/bin/etcd
+    ports:
+      - "${ETCD_HOST_PORT:-2379}:2379"
+    healthcheck:
+      test: ["CMD", "etcdctl", "endpoint", "health"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  mysql:
+    image: mysql:8.4
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-hsr123456}
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+    ports:
+      - "${MYSQL_HOST_PORT:-3306}:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ./mysql-init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p$$MYSQL_ROOT_PASSWORD"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  redis:
+    image: redis:7.4-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "${REDIS_HOST_PORT:-6379}:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  user-service:
+    <<: *service-common
+    image: ${USER_SERVICE_IMAGE:-particle050811/fanone-user-service:latest}
+    environment:
+      ETCD_ENDPOINTS: etcd:2379
+      REDIS_ADDR: redis:6379
+      REDIS_PASSWORD: ""
+      REDIS_DB: "0"
+      JWT_SECRET: ${JWT_SECRET:-fanone-microservices-secret-key-2024}
+      USER_RPC_ADDR: 0.0.0.0:9001
+      USER_DB_DSN: root:${MYSQL_ROOT_PASSWORD:-hsr123456}@tcp(mysql:3306)/fanone_user?charset=utf8mb4&parseTime=True&loc=Local
+    depends_on:
+      mysql:
+        condition: service_healthy
+      etcd:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  video-service:
+    <<: *service-common
+    image: ${VIDEO_SERVICE_IMAGE:-particle050811/fanone-video-service:latest}
+    environment:
+      ETCD_ENDPOINTS: etcd:2379
+      REDIS_ADDR: redis:6379
+      REDIS_PASSWORD: ""
+      REDIS_DB: "0"
+      JWT_SECRET: ${JWT_SECRET:-fanone-microservices-secret-key-2024}
+      VIDEO_RPC_ADDR: 0.0.0.0:9002
+      VIDEO_DB_DSN: root:${MYSQL_ROOT_PASSWORD:-hsr123456}@tcp(mysql:3306)/fanone_video?charset=utf8mb4&parseTime=True&loc=Local
+    depends_on:
+      mysql:
+        condition: service_healthy
+      etcd:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  interaction-service:
+    <<: *service-common
+    image: ${INTERACTION_SERVICE_IMAGE:-particle050811/fanone-interaction-service:latest}
+    environment:
+      ETCD_ENDPOINTS: etcd:2379
+      REDIS_ADDR: redis:6379
+      REDIS_PASSWORD: ""
+      REDIS_DB: "0"
+      JWT_SECRET: ${JWT_SECRET:-fanone-microservices-secret-key-2024}
+      INTERACTION_RPC_ADDR: 0.0.0.0:9003
+      INTERACTION_DB_DSN: root:${MYSQL_ROOT_PASSWORD:-hsr123456}@tcp(mysql:3306)/fanone_interaction?charset=utf8mb4&parseTime=True&loc=Local
+    depends_on:
+      mysql:
+        condition: service_healthy
+      etcd:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  chat-service:
+    <<: *service-common
+    image: ${CHAT_SERVICE_IMAGE:-particle050811/fanone-chat-service:latest}
+    environment:
+      ETCD_ENDPOINTS: etcd:2379
+      REDIS_ADDR: redis:6379
+      REDIS_PASSWORD: ""
+      REDIS_DB: "0"
+      JWT_SECRET: ${JWT_SECRET:-fanone-microservices-secret-key-2024}
+      CHAT_RPC_ADDR: 0.0.0.0:9004
+      CHAT_HTTP_ADDR: :8889
+    ports:
+      - "${CHAT_HTTP_PORT:-8889}:8889"
+
+  gateway:
+    <<: *service-common
+    image: ${GATEWAY_IMAGE:-particle050811/fanone-gateway:latest}
+    environment:
+      ETCD_ENDPOINTS: etcd:2379
+      REDIS_ADDR: redis:6379
+      REDIS_PASSWORD: ""
+      REDIS_DB: "0"
+      JWT_SECRET: ${JWT_SECRET:-fanone-microservices-secret-key-2024}
+      GATEWAY_HTTP_ADDR: :8888
+      STORAGE_ROOT: /app/storage
+    ports:
+      - "${GATEWAY_HTTP_PORT:-8888}:8888"
+    volumes:
+      - gateway-storage:/app/storage
+
+volumes:
+  mysql-data:
+  redis-data:
+  gateway-storage:

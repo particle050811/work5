@@ -1,4 +1,4 @@
-name: Build Docker Image
+name: Build Docker Images
 
 on:
   push:
@@ -39,6 +39,25 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - service: gateway
+            image: particle050811/fanone-gateway
+            dockerfile: ./services/gateway/Dockerfile
+          - service: user-service
+            image: particle050811/fanone-user-service
+            dockerfile: ./services/user/Dockerfile
+          - service: video-service
+            image: particle050811/fanone-video-service
+            dockerfile: ./services/video/Dockerfile
+          - service: interaction-service
+            image: particle050811/fanone-interaction-service
+            dockerfile: ./services/interaction/Dockerfile
+          - service: chat-service
+            image: particle050811/fanone-chat-service
+            dockerfile: ./services/chat/Dockerfile
 
     steps:
       - name: Checkout code
@@ -59,15 +78,15 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           context: .
-          file: ./services/gateway/Dockerfile
+          file: ${{ matrix.dockerfile }}
           push: ${{ github.event_name != 'pull_request' }}
-          tags: particle050811/fanone-video:${{ github.sha }}
+          tags: ${{ matrix.image }}:${{ github.sha }}
           cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-to: type=gha,mode=max,scope=${{ matrix.service }}
 
       - name: Push latest tag after commit tag
         if: github.event_name != 'pull_request'
         run: |
           docker buildx imagetools create \
-            -t particle050811/fanone-video:latest \
-            particle050811/fanone-video@${{ steps.build_image.outputs.digest }}
+            -t ${{ matrix.image }}:latest \
+            ${{ matrix.image }}@${{ steps.build_image.outputs.digest }}
