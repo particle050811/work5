@@ -1,0 +1,11 @@
+.git
+.github
+.claude
+.vscode
+.runtime
+deploy
+learning
+storage
+test
+scripts
+*.log

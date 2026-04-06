@@ -6,21 +6,35 @@ on:
       - main
       - master
     paths:
-      - "video-platform/**"
+      - "**/*.go"
+      - "go.mod"
+      - "go.sum"
+      - "go.work"
+      - "go.work.sum"
+      - "services/**"
+      - "gen/**"
+      - "pkg/**"
+      - "idl/**"
+      - "test/**"
       - ".github/workflows/unit-test.yml"
   pull_request:
     paths:
-      - "video-platform/**"
+      - "**/*.go"
+      - "go.mod"
+      - "go.sum"
+      - "go.work"
+      - "go.work.sum"
+      - "services/**"
+      - "gen/**"
+      - "pkg/**"
+      - "idl/**"
+      - "test/**"
       - ".github/workflows/unit-test.yml"
   workflow_dispatch:
 
 jobs:
   test:
     runs-on: ubuntu-latest
-
-    defaults:
-      run:
-        working-directory: video-platform
 
     steps:
       - name: Checkout code
@@ -29,11 +43,27 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version-file: video-platform/go.mod
-          cache-dependency-path: video-platform/go.sum
+          go-version-file: go.mod
+          cache-dependency-path: |
+            go.sum
+            go.work.sum
+            gen/rpc/go.sum
+            services/chat/go.sum
+            services/gateway/go.sum
+            services/interaction/go.sum
+            services/user/go.sum
+            services/video/go.sum
+            test/go.sum
 
       - name: Download dependencies
-        run: go mod download
+        run: |
+          go work sync
+          for mod in . ./gen/rpc ./services/chat ./services/gateway ./services/interaction ./services/user ./services/video ./test; do
+            (cd "$mod" && go mod download)
+          done
 
       - name: Run unit tests
-        run: go test ./...
+        run: |
+          for mod in . ./gen/rpc ./services/chat ./services/gateway ./services/interaction ./services/user ./services/video ./test; do
+            (cd "$mod" && go test ./...)
+          done
