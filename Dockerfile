@@ -2,7 +2,7 @@ FROM golang:1.25 AS builder
 
 WORKDIR /src
 
-COPY go.mod go.sum go.work go.work.sum ./
+COPY go.mod go.sum ./
 COPY gen ./gen
 COPY pkg ./pkg
 COPY idl ./idl
@@ -11,7 +11,7 @@ COPY services ./services
 
 RUN --mount=type=cache,target=/go/pkg/mod \
     --mount=type=cache,target=/root/.cache/go-build \
-    GOWORK=/src/go.work CGO_ENABLED=0 go build -o /out/gateway ./services/gateway
+    cd /src/services/gateway && GOWORK=off CGO_ENABLED=0 go build -o /out/gateway .
 
 FROM alpine:3.22
 
