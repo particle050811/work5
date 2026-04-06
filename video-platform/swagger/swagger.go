@@ -37,18 +37,18 @@ func BindSwagger(h *server.Hertz) {
 	// OpenAPI YAML 文件
 	h.GET("/openapi/user.yaml", func(c context.Context, ctx *app.RequestContext) {
 		ctx.Header("Content-Type", "application/x-yaml")
-		ctx.Write(userYAML)
+		_, _ = ctx.Write(userYAML)
 	})
 	h.GET("/openapi/video.yaml", func(c context.Context, ctx *app.RequestContext) {
 		ctx.Header("Content-Type", "application/x-yaml")
-		ctx.Write(videoYAML)
+		_, _ = ctx.Write(videoYAML)
 	})
 	h.GET("/openapi/interaction.yaml", func(c context.Context, ctx *app.RequestContext) {
 		ctx.Header("Content-Type", "application/x-yaml")
-		ctx.Write(interactionYAML)
+		_, _ = ctx.Write(interactionYAML)
 	})
 	h.GET("/openapi/relation.yaml", func(c context.Context, ctx *app.RequestContext) {
 		ctx.Header("Content-Type", "application/x-yaml")
-		ctx.Write(relationYAML)
+		_, _ = ctx.Write(relationYAML)
 	})
 }

@@ -34,14 +34,20 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Build image
+      - name: Build and push commit tag
+        id: build_image
         uses: docker/build-push-action@v6
         with:
           context: ./video-platform
           file: ./video-platform/Dockerfile
           push: ${{ github.event_name != 'pull_request' }}
-          tags: |
-            particle050811/fanone-video:latest
-            particle050811/fanone-video:${{ github.sha }}
+          tags: particle050811/fanone-video:${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      - name: Push latest tag after commit tag
+        if: github.event_name != 'pull_request'
+        run: |
+          docker buildx imagetools create \
+            -t particle050811/fanone-video:latest \
+            particle050811/fanone-video@${{ steps.build_image.outputs.digest }}

@@ -1,0 +1,40 @@
+run:
+  timeout: 5m
+  tests: true
+  modules-download-mode: readonly
+
+issues:
+  exclude-generated: strict
+  exclude-rules:
+    - path: ^swagger/(user|video|interaction|relation)/swagger\.go$
+      linters:
+        - errcheck
+        - revive
+    - path: ^swagger/swagger\.go$
+      linters:
+        - errcheck
+        - revive
+
+linters:
+  disable-all: true
+  enable:
+    - errcheck
+    - govet
+    - ineffassign
+    - misspell
+    - revive
+    - staticcheck
+    - unconvert
+
+linters-settings:
+  revive:
+    rules:
+      - name: indent-error-flow
+      - name: empty-block
+      - name: superfluous-else
+      - name: unreachable-code
+      - name: var-declaration
+      - name: atomic
+      - name: bare-return
+      - name: struct-tag
+      - name: time-naming

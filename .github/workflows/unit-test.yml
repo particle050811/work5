@@ -1,0 +1,39 @@
+name: Unit Test
+
+on:
+  push:
+    branches:
+      - main
+      - master
+    paths:
+      - "video-platform/**"
+      - ".github/workflows/unit-test.yml"
+  pull_request:
+    paths:
+      - "video-platform/**"
+      - ".github/workflows/unit-test.yml"
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: video-platform
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: video-platform/go.mod
+          cache-dependency-path: video-platform/go.sum
+
+      - name: Download dependencies
+        run: go mod download
+
+      - name: Run unit tests
+        run: go test ./...

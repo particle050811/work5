@@ -179,21 +179,21 @@ func newFakeRedisClient() *fakeRedisClient {
 	}
 }
 
-func (f *fakeRedisClient) Get(ctx context.Context, key string) *redis.StringCmd {
+func (f *fakeRedisClient) Get(_ context.Context, key string) *redis.StringCmd {
 	if !f.exists[key] {
 		return redis.NewStringResult("", redis.Nil)
 	}
 	return redis.NewStringResult(f.setValue[key], nil)
 }
 
-func (f *fakeRedisClient) Set(ctx context.Context, key string, value interface{}, expiration time.Duration) *redis.StatusCmd {
+func (f *fakeRedisClient) Set(_ context.Context, key string, value interface{}, expiration time.Duration) *redis.StatusCmd {
 	f.exists[key] = true
 	f.setValue[key] = toString(value)
 	f.lastSetTTL = expiration
 	return redis.NewStatusResult("OK", nil)
 }
 
-func (f *fakeRedisClient) SetNX(ctx context.Context, key string, value interface{}, expiration time.Duration) *redis.BoolCmd {
+func (f *fakeRedisClient) SetNX(_ context.Context, key string, value interface{}, _ time.Duration) *redis.BoolCmd {
 	if !f.setNXResult {
 		return redis.NewBoolResult(false, nil)
 	}
@@ -202,7 +202,7 @@ func (f *fakeRedisClient) SetNX(ctx context.Context, key string, value interface
 	return redis.NewBoolResult(true, nil)
 }
 
-func (f *fakeRedisClient) Del(ctx context.Context, keys ...string) *redis.IntCmd {
+func (f *fakeRedisClient) Del(_ context.Context, keys ...string) *redis.IntCmd {
 	var deleted int64
 	for _, key := range keys {
 		if f.exists[key] {
@@ -215,7 +215,7 @@ func (f *fakeRedisClient) Del(ctx context.Context, keys ...string) *redis.IntCmd
 	return redis.NewIntResult(deleted, nil)
 }
 
-func (f *fakeRedisClient) Exists(ctx context.Context, keys ...string) *redis.IntCmd {
+func (f *fakeRedisClient) Exists(_ context.Context, keys ...string) *redis.IntCmd {
 	var count int64
 	for _, key := range keys {
 		if f.exists[key] {
@@ -225,7 +225,7 @@ func (f *fakeRedisClient) Exists(ctx context.Context, keys ...string) *redis.Int
 	return redis.NewIntResult(count, nil)
 }
 
-func (f *fakeRedisClient) Expire(ctx context.Context, key string, expiration time.Duration) *redis.BoolCmd {
+func (f *fakeRedisClient) Expire(_ context.Context, key string, expiration time.Duration) *redis.BoolCmd {
 	if f.exists[key] {
 		f.lastExpireTTL = expiration
 		return redis.NewBoolResult(true, nil)
@@ -233,7 +233,7 @@ func (f *fakeRedisClient) Expire(ctx context.Context, key string, expiration tim
 	return redis.NewBoolResult(false, nil)
 }
 
-func (f *fakeRedisClient) ZAdd(ctx context.Context, key string, members ...redis.Z) *redis.IntCmd {
+func (f *fakeRedisClient) ZAdd(_ context.Context, key string, members ...redis.Z) *redis.IntCmd {
 	f.exists[key] = true
 	f.zMembers[key] = append([]redis.Z(nil), members...)
 	return redis.NewIntResult(int64(len(members)), nil)
@@ -253,15 +253,15 @@ func (f *fakeRedisClient) ZRevRangeWithScores(ctx context.Context, key string, s
 	return cmd
 }
 
-func (f *fakeRedisClient) ZIncrBy(ctx context.Context, key string, increment float64, member string) *redis.FloatCmd {
+func (f *fakeRedisClient) ZIncrBy(_ context.Context, _ string, increment float64, _ string) *redis.FloatCmd {
 	return redis.NewFloatResult(increment, nil)
 }
 
-func (f *fakeRedisClient) ZRem(ctx context.Context, key string, members ...interface{}) *redis.IntCmd {
+func (f *fakeRedisClient) ZRem(_ context.Context, _ string, _ ...interface{}) *redis.IntCmd {
 	return redis.NewIntResult(0, nil)
 }
 
-func (f *fakeRedisClient) ZScore(ctx context.Context, key string, member string) *redis.FloatCmd {
+func (f *fakeRedisClient) ZScore(_ context.Context, _ string, _ string) *redis.FloatCmd {
 	return redis.NewFloatResult(0, nil)
 }
 

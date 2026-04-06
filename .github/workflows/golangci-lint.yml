@@ -1,0 +1,42 @@
+name: GolangCI-Lint
+
+on:
+  push:
+    branches:
+      - main
+      - master
+    paths:
+      - "video-platform/**"
+      - ".golangci.yml"
+      - ".github/workflows/golangci-lint.yml"
+  pull_request:
+    paths:
+      - "video-platform/**"
+      - ".golangci.yml"
+      - ".github/workflows/golangci-lint.yml"
+  workflow_dispatch:
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: video-platform
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: video-platform/go.mod
+          cache-dependency-path: video-platform/go.sum
+
+      - name: Run golangci-lint
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: v1.64.8
+          working-directory: video-platform
+          args: --config ../.golangci.yml
