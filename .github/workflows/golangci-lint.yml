@@ -35,8 +35,8 @@ jobs:
           cache-dependency-path: video-platform/go.sum
 
       - name: Run golangci-lint
-        uses: golangci/golangci-lint-action@v6
+        uses: golangci/golangci-lint-action@v9
         with:
-          version: v1.64.8
+          version: v2.1
           working-directory: video-platform
-          args: --config ../.golangci.yml
+          args: --config=../.golangci.yml
