@@ -1,5 +1,11 @@
 .env
 .runtime/
+services/*/__debug_bin*
+services/gateway/gateway
+services/user/user
+services/video/video
+services/interaction/interaction
+services/chat/chat
 storage/avatars/*
 !storage/avatars/.gitignore
 storage/videos/*
