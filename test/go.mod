@@ -1,4 +1,4 @@
-module fanone-work4-test
+module fanone-work5-test
 
 go 1.21
 

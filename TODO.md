@@ -9,7 +9,7 @@
 ### 1. 社交模块功能闭环
 
 - [x] 补齐社交模块 e2e 测试
-  - 文件：[test/relation.go](/home/particle/2025-2/west2onlie_GoWeb/work4/test/relation.go)
+  - 文件：[test/relation.go](/home/particle/2025-2/west2onlie_GoWeb/work5/test/relation.go)
   - 现状：仍是 TODO，占位未实现
   - 需要覆盖：
     - 关注
@@ -22,22 +22,22 @@
     - 未登录访问好友列表的行为
 
 - [x] 在测试入口串联社交流程
-  - 文件：[test/main.go](/home/particle/2025-2/west2onlie_GoWeb/work4/test/main.go)
+  - 文件：[test/main.go](/home/particle/2025-2/west2onlie_GoWeb/work5/test/main.go)
   - 目标：把“注册 -> 登录 -> 关注 -> 粉丝 -> 好友 -> 取关”加入完整流程
 
 ### 2. 修复关注关系表未迁移问题
 
 - [x] 将 `Follow` 模型加入自动迁移
-  - 文件：[video-platform/biz/dal/store.go](/home/particle/2025-2/west2onlie_GoWeb/work4/video-platform/biz/dal/store.go)
-  - 关联模型：[video-platform/biz/dal/model/follow.go](/home/particle/2025-2/west2onlie_GoWeb/work4/video-platform/biz/dal/model/follow.go)
+  - 文件：[video-platform/biz/dal/store.go](/home/particle/2025-2/west2onlie_GoWeb/work5/video-platform/biz/dal/store.go)
+  - 关联模型：[video-platform/biz/dal/model/follow.go](/home/particle/2025-2/west2onlie_GoWeb/work5/video-platform/biz/dal/model/follow.go)
   - 风险：新数据库环境下社交接口会直接失败
 
 ### 3. 修复好友列表鉴权缺口
 
 - [x] 给好友列表路由挂载认证中间件
-  - 文件：[video-platform/biz/router/v1/middleware.go](/home/particle/2025-2/west2onlie_GoWeb/work4/video-platform/biz/router/v1/middleware.go)
+  - 文件：[video-platform/biz/router/v1/middleware.go](/home/particle/2025-2/west2onlie_GoWeb/work5/video-platform/biz/router/v1/middleware.go)
   - 问题：`ListFriends` 在 handler 里直接读取 JWT 中的 `user_id`，但路由没有鉴权
-  - 关联 handler：[video-platform/biz/handler/v1/relation_handler.go](/home/particle/2025-2/west2onlie_GoWeb/work4/video-platform/biz/handler/v1/relation_handler.go)
+  - 关联 handler：[video-platform/biz/handler/v1/relation_handler.go](/home/particle/2025-2/west2onlie_GoWeb/work5/video-platform/biz/handler/v1/relation_handler.go)
 
 ### 4. 补齐 Docker 交付
 
@@ -73,7 +73,7 @@
 ### 1. 修复 Redis 降级逻辑
 
 - [x] 让 Redis 连接失败时可降级，而不是直接退出
-  - 文件：[video-platform/biz/dal/redis.go](/home/particle/2025-2/west2onlie_GoWeb/work4/video-platform/biz/dal/redis.go)
+  - 文件：[video-platform/biz/dal/redis.go](/home/particle/2025-2/west2onlie_GoWeb/work5/video-platform/biz/dal/redis.go)
   - 当前问题：
     - 未配置 `REDIS_ADDR` 会 `log.Fatal`
     - Ping 失败也会 `log.Fatal`
@@ -83,13 +83,13 @@
     - 日志中明确标记 Redis 降级
 
 - [x] 修正 `HasRedis()` 逻辑
-  - 文件：[video-platform/biz/dal/store.go](/home/particle/2025-2/west2onlie_GoWeb/work4/video-platform/biz/dal/store.go)
+  - 文件：[video-platform/biz/dal/store.go](/home/particle/2025-2/west2onlie_GoWeb/work5/video-platform/biz/dal/store.go)
   - 当前问题：固定返回 `true`
 
 ### 2. 完整验证 17 个接口的协议一致性
 
 - [x] 对照官方文档逐项核验请求参数、响应结构和错误码
-  - 参考：[work4-api.md](/home/particle/2025-2/west2onlie_GoWeb/work4/work4-api.md)
+  - 参考：[work4-api.md](/home/particle/2025-2/west2onlie_GoWeb/work5/work4-api.md)
   - 重点核验：
     - 分页字段默认值与上限
     - 评论删除权限
@@ -100,7 +100,7 @@
 ### 3. 补日志中间件
 
 - [x] 增加请求日志
-  - 建议位置：[video-platform/biz/router/v1/middleware.go](/home/particle/2025-2/west2onlie_GoWeb/work4/video-platform/biz/router/v1/middleware.go)
+  - 建议位置：[video-platform/biz/router/v1/middleware.go](/home/particle/2025-2/west2onlie_GoWeb/work5/video-platform/biz/router/v1/middleware.go)
   - 目标字段：
     - request_id
     - method

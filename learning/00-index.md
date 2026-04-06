@@ -15,6 +15,7 @@
 | 2025-12-16 | Go 变量声明与赋值详解 | [09-go-variable-declaration.md](./09-go-variable-declaration.md) |
 | 2025-12-23 | GORM 模型设计详解 | [10-gorm-model-design.md](./10-gorm-model-design.md) |
 | 2026-04-05 | 统一请求日志与业务日志设计 | [11-request-log-and-logger.md](./11-request-log-and-logger.md) |
+| 2026-04-06 | GitHub Actions 与代码质量门禁实践 | [12-ci-and-code-quality.md](./12-ci-and-code-quality.md) |
 
 ### 11-request-log-and-logger.md 内容概要
 
@@ -32,6 +33,24 @@
 | §10 | 关键代码位置 |
 | §11 | 推荐阅读 |
 | §12 | 总结 |
+
+### 12-ci-and-code-quality.md 内容概要
+
+| 章节 | 内容 |
+|------|------|
+| §1 | 问题背景（为什么要补齐 CI 门禁） |
+| §2 | 当前 4 条 workflow 的职责划分 |
+| §3 | GolangCI-Lint workflow 逐步解析 |
+| §4 | `.golangci.yml` 启用的检查项说明 |
+| §5 | 为什么关闭 `unused-parameter`、保留业务代码中的 `ctx` |
+| §6 | `ctx.Write` 为什么写成 `_, _ = ...` |
+| §7 | 本地通过但 CI 失败的版本兼容排查 |
+| §8 | 为什么还要单独加 Unit Test workflow |
+| §9 | Docker `latest` 标签推送顺序问题 |
+| §10 | 整体 CI 门禁模型 |
+| §11 | 关键代码位置 |
+| §12 | 推荐阅读 |
+| §13 | 总结 |
 
 ### 10-gorm-model-design.md 内容概要
 
@@ -162,5 +181,6 @@
 - [x] Go 变量声明 (`09-go-variable-declaration.md`) ✅ 2025-12-16
 - [x] GORM 模型设计 (`10-gorm-model-design.md`) ✅ 2025-12-23
 - [x] 统一请求日志 (`11-request-log-and-logger.md`) ✅ 2026-04-05
+- [x] CI / CodeQL / GolangCI-Lint / Unit Test (`12-ci-and-code-quality.md`) ✅ 2026-04-06
 - [ ] Redis / 缓存应用 (`11-redis-cache.md`)
 - [ ] 社交模块 (`12-relation-module.md`)

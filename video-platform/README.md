@@ -98,7 +98,7 @@ go run .
 
 ### 一键初始化
 
-仓库已提供初始化脚本 [script/init.sh](/home/particle/2025-2/west2onlie_GoWeb/work4/video-platform/script/init.sh)，用于完成以下动作：
+仓库已提供初始化脚本 [script/init.sh](/home/particle/2025-2/west2onlie_GoWeb/work5/video-platform/script/init.sh)，用于完成以下动作：
 
 - 首次复制 `.env.example` 为 `.env`
 - 创建 `storage/avatars`、`storage/videos` 目录
@@ -112,7 +112,7 @@ bash script/init.sh
 
 ### Make 命令说明
 
-仓库根目录提供 [Makefile](/home/particle/2025-2/west2onlie_GoWeb/work4/video-platform/Makefile)，便于统一本地操作：
+仓库根目录提供 [Makefile](/home/particle/2025-2/west2onlie_GoWeb/work5/video-platform/Makefile)，便于统一本地操作：
 
 ```bash
 make help
@@ -276,7 +276,7 @@ curl --noproxy localhost -s \
 
 ### 1. 构建镜像
 
-在 [video-platform/Dockerfile](/home/particle/2025-2/west2onlie_GoWeb/work4/video-platform/Dockerfile) 所在目录执行：
+在 [video-platform/Dockerfile](/home/particle/2025-2/west2onlie_GoWeb/work5/video-platform/Dockerfile) 所在目录执行：
 
 ```bash
 docker build -t fanone-video:latest .
@@ -295,13 +295,13 @@ docker run -d \
   -e REDIS_DB='0' \
   -e JWT_SECRET='fanone-video-platform-secret-key-2024' \
   -e SERVER_PORT='8888' \
-  -v /home/particle/2025-2/west2onlie_GoWeb/work4/video-platform/storage:/app/storage \
+  -v /home/particle/2025-2/west2onlie_GoWeb/work5/video-platform/storage:/app/storage \
   particle050811/fanone-video:latest
 ```
 
 该命令为本地测试示例，使用宿主机网络，适用于本机 MySQL 和 Redis 运行在 `127.0.0.1` 的场景。镜像名使用当前仓库工作流推送到 Docker Hub 的 `particle050811/fanone-video:latest`。
 
-本地测试时挂载 `storage` 目录，便于直接查看上传文件；实际服务器部署如果不需要保留宿主机侧文件，可删除 `-v /home/particle/2025-2/west2onlie_GoWeb/work4/video-platform/storage:/app/storage` 这一行，直接运行容器。
+本地测试时挂载 `storage` 目录，便于直接查看上传文件；实际服务器部署如果不需要保留宿主机侧文件，可删除 `-v /home/particle/2025-2/west2onlie_GoWeb/work5/video-platform/storage:/app/storage` 这一行，直接运行容器。
 
 如果使用本地刚构建的镜像，需将命令最后一行的镜像名改为 `fanone-video:latest`。
 

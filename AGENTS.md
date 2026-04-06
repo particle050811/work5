@@ -1,6 +1,6 @@
 # AGENTS.md
 
-此文件为 Claude Code 和 Codex 在本仓库（Golang Lab4）工作的统一指南。
+此文件为 Claude Code 和 Codex 在本仓库（Golang Lab5）工作的统一指南。
 
 ## 基本规范
 
@@ -61,7 +61,7 @@ log.Printf("保存视频失败: %v", err)
 
 ## 项目概述
 
-本仓库目标是实现 **FanOne 视频平台** 的后端 API（参见 `work4-request.md` 与 https://doc.west2.online/）。平台需覆盖用户、视频、互动、社交四大模块，提供最少 17 个接口，并支持双 Token 认证、Redis 排行榜缓存、文件投稿、Docker 化部署等现代实践。**所有接口协议需要以 Protobuf 描述并通过脚手架生成服务桩**。后续所有课程作业都会在此项目基础上扩展，请保持项目结构清晰、可演进。
+本仓库目标是实现 **FanOne 视频平台** 的后端 API（当前基线需求见 `work4-request.md` 与 https://doc.west2.online/，后续将在此基础上扩展为 Lab5）。平台需覆盖用户、视频、互动、社交四大模块，提供最少 17 个接口，并支持双 Token 认证、Redis 排行榜缓存、文件投稿、Docker 化部署等现代实践。**所有接口协议需要以 Protobuf 描述并通过脚手架生成服务桩**。后续所有课程作业都会在此项目基础上扩展，请保持项目结构清晰、可演进。
 
 ## 最低交付接口
 
