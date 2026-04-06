@@ -152,11 +152,11 @@ hz update --idl api/video/v1/*.proto
 
 ### 文件引用
 
-- `video-platform/api/video/v1/common.proto` - 通用类型定义
-- `video-platform/api/video/v1/user.proto` - 用户模块
-- `video-platform/api/video/v1/video.proto` - 视频模块
-- `video-platform/api/video/v1/interaction.proto` - 互动模块
-- `video-platform/api/video/v1/relation.proto` - 社交模块
+- `shared/api/video/v1/common.proto` - 通用类型定义
+- `shared/api/video/v1/user.proto` - 用户模块
+- `shared/api/video/v1/video.proto` - 视频模块
+- `shared/api/video/v1/interaction.proto` - 互动模块
+- `shared/api/video/v1/relation.proto` - 社交模块
 
 ### 推荐阅读
 
@@ -274,7 +274,7 @@ message RefreshTokenResponse {
 
 #### 文件引用
 
-- `video-platform/api/video/v1/user.proto:35-40`
+- `shared/api/video/v1/user.proto:35-40`
 
 ---
 
@@ -364,7 +364,7 @@ message ListFriendsRequest {
 
 #### 文件引用
 
-- `video-platform/api/video/v1/relation.proto:40-76`
+- `shared/api/video/v1/relation.proto:40-76`
 
 ---
 
@@ -394,7 +394,7 @@ message VideoLikeActionRequest {
 
 #### 文件引用
 
-- `video-platform/api/video/v1/interaction.proto:41-50`
+- `shared/api/video/v1/interaction.proto:41-50`
 
 ---
 
@@ -431,8 +431,8 @@ message ListUserCommentsRequest {
 
 #### 文件引用
 
-- `video-platform/api/video/v1/video.proto:69-95`
-- `video-platform/api/video/v1/interaction.proto:71-81`
+- `shared/api/video/v1/video.proto:69-95`
+- `shared/api/video/v1/interaction.proto:71-81`
 
 ---
 
@@ -464,13 +464,13 @@ message DeleteCommentRequest {
 
 #### 文件引用
 
-- `video-platform/api/video/v1/interaction.proto:83-88`
+- `shared/api/video/v1/interaction.proto:83-88`
 
 ---
 
 ### 文件引用
 
-- `video-platform/api/video/v1/video.proto:35-38` - PublishVideoRequest 定义
-- `video-platform/api/video/v1/user.proto` - 用户模块（含双 Token）
-- `video-platform/api/video/v1/relation.proto` - 社交模块（Followings/Followers/Friends）
-- `video-platform/api/video/v1/interaction.proto` - 互动模块（点赞/评论）
+- `shared/api/video/v1/video.proto:35-38` - PublishVideoRequest 定义
+- `shared/api/video/v1/user.proto` - 用户模块（含双 Token）
+- `shared/api/video/v1/relation.proto` - 社交模块（Followings/Followers/Friends）
+- `shared/api/video/v1/interaction.proto` - 互动模块（点赞/评论）

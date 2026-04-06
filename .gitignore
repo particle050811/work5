@@ -1,1 +1,6 @@
 .env
+.runtime/
+storage/avatars/*
+!storage/avatars/.gitignore
+storage/videos/*
+!storage/videos/.gitignore

@@ -1,0 +1,118 @@
+syntax = "proto3";
+
+package fanone.api.video.v1;
+
+option go_package = "example.com/fanone/work5/idl/http/gen/v1;v1";
+
+import "idl/http/api.proto";
+import "idl/http/common/v1/common.proto";
+import "idl/http/video/v1/video.proto";
+
+// Comment 用于互动评论列表
+// 评论结构支持一级评论（对视频）和二级评论（对评论的回复）
+message Comment {
+  string id = 1;
+  string user_id = 2;          // 评论者 ID
+  string video_id = 3;         // 所属视频 ID（评论挂在哪个视频下）
+  string parent_id = 4;        // 父评论 ID，为空表示一级评论（直接评论视频）
+                               // 不为空表示二级评论（回复某条评论）
+                               // 注：本次作业只需实现一级评论，parent_id 可忽略
+  int64 like_count = 5;        // 该评论的点赞数
+  int64 child_count = 6;       // 子评论数量（二级评论数）
+  string content = 7;          // 评论内容
+  string created_at = 8;
+  string updated_at = 9;
+  string deleted_at = 10;      // 软删除标记
+}
+
+// CommentListWithTotal 用于分页返回评论
+message CommentListWithTotal {
+  repeated Comment items = 1;
+  int64 total = 2;
+}
+
+// LikeActionType 点赞操作类型
+enum LikeActionType {
+  LIKE_ACTION_TYPE_UNSPECIFIED = 0;
+  LIKE_ACTION_TYPE_ADD = 1;    // 点赞
+  LIKE_ACTION_TYPE_CANCEL = 2; // 取消点赞
+}
+
+// ---------- 互动模块请求/响应 ----------
+
+// VideoLikeActionRequest: 对视频点赞/取消点赞
+// 未来扩展评论点赞时，新增 CommentLikeActionRequest 即可
+message VideoLikeActionRequest {
+  string video_id = 1 [(.api.body) = "video_id"];
+  int32 action_type = 2 [(.api.body) = "action_type"]; // 1: 点赞, 2: 取消点赞
+}
+
+message VideoLikeActionResponse {
+  BaseResponse base = 1;
+}
+
+message ListLikedVideosRequest {
+  string user_id = 1 [(.api.query) = "user_id"];
+  int32 page_num = 2 [(.api.query) = "page_num"];
+  int32 page_size = 3 [(.api.query) = "page_size"];
+}
+
+message ListLikedVideosResponse {
+  BaseResponse base = 1;
+  VideoListWithTotal data = 2;  // 包含 items + total，支持分页
+}
+
+message PublishCommentRequest {
+  string video_id = 1 [(.api.body) = "video_id"];
+  string content = 2 [(.api.body) = "content"];
+}
+
+message PublishCommentResponse {
+  BaseResponse base = 1;
+}
+
+// ListUserCommentsRequest: 获取某用户发表的所有评论
+// 查看视频的评论列表请用 video.proto 中的 ListVideoCommentsRequest
+message ListUserCommentsRequest {
+  string user_id = 1 [(.api.query) = "user_id"];
+  int32 page_num = 2 [(.api.query) = "page_num"];
+  int32 page_size = 3 [(.api.query) = "page_size"];
+}
+
+message ListUserCommentsResponse {
+  BaseResponse base = 1;
+  CommentListWithTotal data = 2;
+}
+
+// DeleteCommentRequest: 删除评论
+// 只需 comment_id，视频归属信息从数据库获取
+// 注意：需校验当前用户是否为评论作者
+message DeleteCommentRequest {
+  string comment_id = 1 [(.api.body) = "comment_id"];
+}
+
+message DeleteCommentResponse {
+  BaseResponse base = 1;
+}
+
+// ---------- Handler 定义 ----------
+
+service InteractionHandler {
+  // 视频点赞（未来扩展：CommentLikeAction）
+  rpc VideoLikeAction(VideoLikeActionRequest) returns (VideoLikeActionResponse) {
+    option (.api.post) = "/api/v1/interaction/like";
+  }
+  rpc ListLikedVideos(ListLikedVideosRequest) returns (ListLikedVideosResponse) {
+    option (.api.get) = "/api/v1/interaction/like/list";
+  }
+  // 评论相关
+  rpc PublishComment(PublishCommentRequest) returns (PublishCommentResponse) {
+    option (.api.post) = "/api/v1/interaction/comment";
+  }
+  rpc ListUserComments(ListUserCommentsRequest) returns (ListUserCommentsResponse) {
+    option (.api.get) = "/api/v1/interaction/comment/list";
+  }
+  rpc DeleteComment(DeleteCommentRequest) returns (DeleteCommentResponse) {
+    option (.api.post) = "/api/v1/interaction/comment/delete";
+  }
+}

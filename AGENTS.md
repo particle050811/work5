@@ -96,66 +96,33 @@ log.Printf("保存视频失败: %v", err)
 - **对象存储**：本地文件系统起步，可预留 MinIO / OSS 扩展能力
 - **构建与部署**：Go Modules、Docker、（可选）docker-compose
 
-## 当前项目结构（Hertz + Protobuf）
+## 当前项目结构（微服务）
 
 ```
-video-platform/
-├── main.go                           # 服务入口
-├── router.go                         # 自定义路由（可扩展）
-├── router_gen.go                     # 生成的路由注册入口
-├── .env.example                      # 环境变量示例
-├── api.proto                         # Hertz HTTP 注解定义文件
-├── api/video/v1/                     # Protobuf 接口定义
-│   ├── common.proto                  # 公共消息（BaseResponse、PageParams）
-│   ├── user.proto                    # 用户模块（5 接口）
-│   ├── video.proto                   # 视频模块（5 接口）
-│   ├── interaction.proto             # 互动模块（5 接口）
-│   └── relation.proto                # 社交模块（4 接口）
-├── biz/
-│   ├── handler/v1/                   # HTTP 处理器
-│   │   ├── user_service.go           # ✅ 已实现：注册、登录、刷新令牌、用户信息、头像上传
-│   │   ├── video_service.go          # 待实现
-│   │   ├── interaction_service.go    # 待实现
-│   │   └── relation_service.go       # 待实现
-│   ├── model/api/video/v1/           # 生成的 Protobuf Go 代码
-│   │   ├── common.pb.go
-│   │   ├── user.pb.go
-│   │   ├── video.pb.go
-│   │   ├── interaction.pb.go
-│   │   └── relation.pb.go
-│   ├── dal/                          # 数据访问层
-│   │   ├── store.go                  # 统一 DB/Redis 入口
-│   │   ├── redis.go                  # Redis 客户端初始化（降级模式）
-│   │   ├── db/
-│   │   │   ├── db.go                 # MySQL 初始化
-│   │   │   └── user_dao.go           # ✅ 用户 DAO
-│   │   └── model/
-│   │       └── user.go               # ✅ 用户模型
-│   └── router/v1/                    # 生成的路由注册
-│       ├── user.go
-│       ├── video.go
-│       ├── interaction.go
-│       ├── relation.go
-│       └── middleware.go             # 中间件挂载点
-├── pkg/                              # 公共工具包
+work5/
+├── pkg/
 │   ├── auth/
-│   │   ├── jwt.go                    # ✅ JWT 双 Token 管理
-│   │   └── password.go               # ✅ 密码哈希
+│   ├── logger/
 │   ├── middleware/
-│   │   └── auth.go                   # ✅ 认证中间件
-│   └── response/
-│       └── response.go               # ✅ 统一响应结构
-├── swagger/                          # Swagger API 文档
-│   ├── swagger.go                    # Swagger UI 绑定入口
-│   ├── user/openapi.yaml
-│   ├── video/openapi.yaml
-│   ├── interaction/openapi.yaml
-│   └── relation/openapi.yaml
-├── storage/                          # 文件存储
-│   └── avatars/                      # ✅ 用户头像
-├── go.mod / go.sum                   # 依赖管理
-├── build.sh                          # 构建脚本
-└── Dockerfile                        # 待创建：Docker 部署
+│   ├── response/
+│   ├── storage/
+│   └── util/
+├── idl/
+│   ├── http/                         # 对外 HTTP Protobuf
+│   └── rpc/                          # 内部 RPC Protobuf
+├── docs/swagger/                     # OpenAPI 文档
+├── services/
+│   ├── gateway/
+│   ├── user/
+│   ├── video/
+│   ├── interaction/
+│   └── chat/
+├── storage/                         # 运行态上传目录
+│   ├── avatars/
+│   └── videos/
+├── gen/rpc/                          # Kitex 生成代码
+├── scripts/                          # 微服务启动/停止/冒烟脚本
+└── deploy/                           # docker-compose 等部署文件
 ```
 
 如果切换到 Kratos/其他框架，请保持职责划分一致，并在 README 中同步最新结构图。
@@ -166,15 +133,14 @@ video-platform/
 
 1. **初始化项目**（首次使用）
    ```bash
-   cd video-platform
-   hz new --module video-platform --idl api/video/v1/user.proto --proto_path=.
+   hz model --out_dir . --model_dir idl/http/gen --idl idl/http/user/v1/user.proto --proto_path=.
    ```
 
 2. **更新/新增模块**（添加新 proto 文件时）
    ```bash
-   hz update --idl api/video/v1/video.proto --proto_path=.
-   hz update --idl api/video/v1/interaction.proto --proto_path=.
-   hz update --idl api/video/v1/relation.proto --proto_path=.
+   hz model --out_dir . --model_dir idl/http/gen --idl idl/http/video/v1/video.proto --proto_path=.
+   hz model --out_dir . --model_dir idl/http/gen --idl idl/http/interaction/v1/interaction.proto --proto_path=.
+   hz model --out_dir . --model_dir idl/http/gen --idl idl/http/relation/v1/relation.proto --proto_path=.
    ```
 
 3. **依赖管理**
@@ -210,10 +176,10 @@ video-platform/
 go install github.com/hertz-contrib/swagger-generate/protoc-gen-http-swagger@latest
 
 # 生成/更新各模块文档
-protoc --http-swagger_out=swagger/user --proto_path=. api/video/v1/user.proto
-protoc --http-swagger_out=swagger/video --proto_path=. api/video/v1/video.proto
-protoc --http-swagger_out=swagger/interaction --proto_path=. api/video/v1/interaction.proto
-protoc --http-swagger_out=swagger/relation --proto_path=. api/video/v1/relation.proto
+protoc --http-swagger_out=docs/swagger/user --proto_path=. idl/http/user/v1/user.proto
+protoc --http-swagger_out=docs/swagger/video --proto_path=. idl/http/video/v1/video.proto
+protoc --http-swagger_out=docs/swagger/interaction --proto_path=. idl/http/interaction/v1/interaction.proto
+protoc --http-swagger_out=docs/swagger/relation --proto_path=. idl/http/relation/v1/relation.proto
 ```
 
 启动服务后访问 Swagger UI：
@@ -259,10 +225,10 @@ protoc --http-swagger_out=swagger/relation --proto_path=. api/video/v1/relation.
 测试执行流程：
 ```bash
 # 1. 启动服务（后台运行）
-cd video-platform && go run . &
+   ./scripts/dev-up.sh
 
 # 2. 等待服务启动后运行测试
-cd ../test && go run .
+cd test && go run .
 
 # 3. 检查测试结果，确保全部通过
 ```

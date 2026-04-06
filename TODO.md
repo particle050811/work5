@@ -10,8 +10,8 @@
 - 当前仓库已有基础 CI：CodeQL、`golangci-lint`、`unit-test`
 - 根目录尚未看到 `.dockerignore`、`.editorconfig`、`.gitattributes`
 - 尚未看到独立 `config/` 目录与 `config.yaml`
-- 当前项目仍是单体结构，尚未进入微服务拆分
-- 当前项目尚未看到服务注册与发现基础设施
+- 当前项目已完成第一版微服务骨架拆分，HTTP 协议、Swagger 与公共能力已拆分到 `idl/http`、`docs/swagger`、`pkg`
+- 当前项目已接入第一版服务注册与发现骨架：`Kitex + etcd + go.work + services/*`
 - 现有 `interaction.proto` 仍保留“本次作业只需实现一级评论”的旧注释，需要按 Lab5 升级
 - 现有 `relation.proto` 仍未定义聊天相关 WebSocket / 历史消息能力
 
@@ -19,59 +19,93 @@
 
 ### 0. 微服务改造方案先落地
 
-- [ ] 明确微服务拆分方案
+- [x] 明确微服务拆分方案
   - 最低建议：
     - `gateway`
     - `user-service`
     - `video-service`
     - `interaction-service`
     - `chat-service`
+  - 已完成：
+    - 已在 [plan.md](/home/particle/2025-2/west2onlie_GoWeb/work5/plan.md) 明确 5 服务拆分方案与职责边界
+    - 已建立 `services/gateway`、`services/user`、`services/video`、`services/interaction`、`services/chat`
 
-- [ ] 确定 RPC 技术栈
+- [x] 确定 RPC 技术栈
   - 建议：对外 Hertz，对内 Kitex
+  - 已完成：
+    - `gateway` 采用 Hertz 对外提供 HTTP
+    - `user/video/interaction/chat` 已建立 Kitex RPC 服务骨架
+    - 已新增 [idl/rpc](/home/particle/2025-2/west2onlie_GoWeb/work5/idl/rpc) 与 [gen/rpc](/home/particle/2025-2/west2onlie_GoWeb/work5/gen/rpc)
 
-- [ ] 确定服务注册与发现方案
+- [x] 确定服务注册与发现方案
   - 建议优先：`etcd`
   - 需要覆盖：
     - 服务注册
     - 服务发现
     - 本地开发启动方式
     - Docker 部署方式
+  - 已完成：
+    - 已在服务入口接入 `etcd registry/resolver`
+    - 已新增 [scripts/dev-up.sh](/home/particle/2025-2/west2onlie_GoWeb/work5/scripts/dev-up.sh)、[scripts/dev-down.sh](/home/particle/2025-2/west2onlie_GoWeb/work5/scripts/dev-down.sh)、[scripts/dev-status.sh](/home/particle/2025-2/west2onlie_GoWeb/work5/scripts/dev-status.sh)
+    - 已新增 [deploy/docker-compose.micro.yml](/home/particle/2025-2/west2onlie_GoWeb/work5/deploy/docker-compose.micro.yml)
+  - 待完成：
+    - 实例上下线、超时、失败重试的联调验证
+    - `gateway -> chat-service` 的历史消息 RPC 接入
+    - 基于真实可用 `DB_DSN` 跑通完整链路
 
-- [ ] 输出微服务目录重构方案
+- [x] 输出微服务目录重构方案
   - 目标：
     - 网关层和服务层边界清晰
     - 公共 proto / config / pkg 不混乱
+  - 已完成：
+    - 已在 [plan.md](/home/particle/2025-2/west2onlie_GoWeb/work5/plan.md) 第 7 节输出目录重构方案
+    - 已建立 `go.work` 与 `services/*` 多模块骨架
+  - 待完成：
+    - 把各服务从“只有 `main.go` 入口”继续下沉为 `cmd + internal/handler + internal/service + internal/repository`
+    - 继续把各服务 `main.go` 中的入口适配逻辑下沉到各自 `internal/handler`
 
-- [ ] 先补一版架构文档
+- [x] 先补一版架构文档
   - 建议新增：
     - `docs/architecture-microservices.md`
     - `docs/service-discovery.md`
+  - 已完成：
+    - 已新增 [docs/architecture-microservices.md](/home/particle/2025-2/west2onlie_GoWeb/work5/docs/architecture-microservices.md)
+    - 已新增 [docs/service-discovery.md](/home/particle/2025-2/west2onlie_GoWeb/work5/docs/service-discovery.md)
+
+- [x] 打通微服务主链路
+  - 当前进度：
+    - 5 个服务模块均可 `go build ./...`
+    - 单体运行入口已删除，仓库默认只保留微服务链路
+    - 已新增 `scripts/smoke-micro.sh`，用于 `gateway/chat-service + e2e` 冒烟
+  - 已完成：
+    - 基于可用 MySQL 账号跑通 `gateway -> user-service`
+    - 已打通 `video-service`、`interaction-service`
+    - 已完成一轮真实联调，`scripts/smoke-micro.sh` 与 `test/` e2e 通过
 
 ### 1. 更新 IDL，补齐 Lab5 协议
 
 - [ ] 为用户模块补充 MFA 相关接口
-  - 建议文件：[video-platform/api/video/v1/user.proto](/home/particle/2025-2/west2onlie_GoWeb/work5/video-platform/api/video/v1/user.proto)
+  - 建议文件：[idl/http/user/v1/user.proto](/home/particle/2025-2/west2onlie_GoWeb/work5/idl/http/user/v1/user.proto)
   - 最低应包含：
     - 获取 MFA 二维码
     - 绑定 MFA
 
 - [ ] 为视频模块补充视频流接口
-  - 建议文件：[video-platform/api/video/v1/video.proto](/home/particle/2025-2/west2onlie_GoWeb/work5/video-platform/api/video/v1/video.proto)
+  - 建议文件：[idl/http/video/v1/video.proto](/home/particle/2025-2/west2onlie_GoWeb/work5/idl/http/video/v1/video.proto)
   - 最低应明确：
     - 视频流读取方式
     - Range / 分片读取策略
     - 返回头设计
 
 - [ ] 为互动模块补齐“评论回复 + 评论点赞”协议
-  - 当前文件：[video-platform/api/video/v1/interaction.proto](/home/particle/2025-2/west2onlie_GoWeb/work5/video-platform/api/video/v1/interaction.proto)
+  - 当前文件：[idl/http/interaction/v1/interaction.proto](/home/particle/2025-2/west2onlie_GoWeb/work5/idl/http/interaction/v1/interaction.proto)
   - 当前问题：
     - 仍写着“本次作业只需实现一级评论”
     - 只有视频点赞，没有评论点赞
     - `PublishCommentRequest` 缺少 `comment_id` / `parent_id` 语义
 
 - [ ] 为社交模块补充聊天协议
-  - 当前文件：[video-platform/api/video/v1/relation.proto](/home/particle/2025-2/west2onlie_GoWeb/work5/video-platform/api/video/v1/relation.proto)
+  - 当前文件：[idl/http/relation/v1/relation.proto](/home/particle/2025-2/west2onlie_GoWeb/work5/idl/http/relation/v1/relation.proto)
   - 最低应明确：
     - 建立聊天连接
     - 消息结构
@@ -80,8 +114,8 @@
 
 - [ ] 执行代码生成并同步更新 Swagger
   - 相关目录：
-    - [video-platform/biz/model/api](/home/particle/2025-2/west2onlie_GoWeb/work5/video-platform/biz/model/api)
-    - [video-platform/swagger](/home/particle/2025-2/west2onlie_GoWeb/work5/video-platform/swagger)
+    - [idl/http/gen](/home/particle/2025-2/west2onlie_GoWeb/work5/idl/http/gen)
+    - [docs/swagger](/home/particle/2025-2/west2onlie_GoWeb/work5/docs/swagger)
   - 注意：
     - 带 `Code generated` 标记的文件只能通过生成命令更新
 
@@ -92,7 +126,7 @@
     - `conversation`
     - `message`
     - 可选 `conversation_member`
-  - 建议目录：[video-platform/biz/dal/model](/home/particle/2025-2/west2onlie_GoWeb/work5/video-platform/biz/dal/model)
+  - 建议目录：`services/chat/internal/repository/model`
 
 - [ ] 设计聊天持久化与实时投递方案
   - 要求：`Redis + MySQL`
@@ -102,7 +136,7 @@
     - 聊天服务独立为 `chat-service`
 
 - [ ] 基于 Hertz WebSocket 实现聊天 handler
-  - 建议目录：[video-platform/biz/handler/v1](/home/particle/2025-2/west2onlie_GoWeb/work5/video-platform/biz/handler/v1)
+  - 建议目录：`services/chat/internal/handler`
   - 建议内容：
     - 建链鉴权
     - 心跳保活
@@ -110,7 +144,7 @@
     - 消息发送与广播
 
 - [ ] 实现聊天 service
-  - 建议目录：[video-platform/biz/service](/home/particle/2025-2/west2onlie_GoWeb/work5/video-platform/biz/service)
+  - 建议目录：`services/chat/internal/service`
   - 最低应覆盖：
     - 创建会话
     - 保存消息
@@ -128,11 +162,11 @@
 
 - [ ] 扩展用户表结构，增加 MFA 状态字段
   - 建议文件：
-    - [video-platform/biz/dal/model/user.go](/home/particle/2025-2/west2onlie_GoWeb/work5/video-platform/biz/dal/model/user.go)
-    - [video-platform/biz/dal/store.go](/home/particle/2025-2/west2onlie_GoWeb/work5/video-platform/biz/dal/store.go)
+    - [user.go](/home/particle/2025-2/west2onlie_GoWeb/work5/services/user/internal/repository/model/user.go)
+    - [store.go](/home/particle/2025-2/west2onlie_GoWeb/work5/services/user/internal/repository/store.go)
 
 - [ ] 生成并返回 MFA 二维码
-  - 建议落点：[video-platform/biz/service/user_service.go](/home/particle/2025-2/west2onlie_GoWeb/work5/video-platform/biz/service/user_service.go)
+  - 建议落点：[user_service.go](/home/particle/2025-2/west2onlie_GoWeb/work5/services/user/internal/service/user_service.go)
 
 - [ ] 实现 MFA 绑定与校验逻辑
   - 最低应明确：
@@ -148,7 +182,7 @@
 ### 4. 实现视频流
 
 - [ ] 为视频文件提供流式读取能力
-  - 建议文件：[video-platform/biz/handler/v1/video_handler.go](/home/particle/2025-2/west2onlie_GoWeb/work5/video-platform/biz/handler/v1/video_handler.go)
+  - 建议文件：[main.go](/home/particle/2025-2/west2onlie_GoWeb/work5/services/gateway/main.go)
 
 - [ ] 支持浏览器常见的 Range 请求
   - 目标：
@@ -164,7 +198,7 @@
 ### 5. 补齐评论回复与评论点赞
 
 - [ ] 扩展评论表结构，支持父子评论
-  - 建议文件：[video-platform/biz/dal/model](/home/particle/2025-2/west2onlie_GoWeb/work5/video-platform/biz/dal/model)
+  - 建议文件：`services/interaction/internal/repository/model`
 
 - [ ] 扩展点赞模型，支持视频与评论两类目标
   - 要点：
@@ -184,27 +218,41 @@
 
 ### 0. 微服务基础设施
 
-- [ ] 为各服务拆分独立启动入口
+- [x] 为各服务拆分独立启动入口
   - 建议结构：
     - `cmd/gateway`
     - `cmd/user-service`
     - `cmd/video-service`
     - `cmd/interaction-service`
     - `cmd/chat-service`
+  - 当前实际状态：
+    - 已建立 `services/gateway`、`services/user`、`services/video`、`services/interaction`、`services/chat`
+  - 待优化：
+    - 目前入口仍集中在各服务的 `main.go`
+    - 后续继续重构为 `cmd/server/main.go`
 
 - [ ] 为各服务拆分配置文件
   - 最低要求：
     - 服务级配置
     - 公共基础设施配置
 
-- [ ] 为服务间调用定义公共 proto / kitex idl
+- [x] 为服务间调用定义公共 proto / kitex idl
   - 避免 HTTP DTO 直接充当内部 RPC 协议
+  - 已完成：
+    - 已新增 [idl/rpc](/home/particle/2025-2/west2onlie_GoWeb/work5/idl/rpc)
+    - 已新增 [scripts/generate-rpc.sh](/home/particle/2025-2/west2onlie_GoWeb/work5/scripts/generate-rpc.sh)
+    - 已生成 [gen/rpc](/home/particle/2025-2/west2onlie_GoWeb/work5/gen/rpc)
 
-- [ ] 接入服务注册与发现
+- [x] 接入服务注册与发现
   - 最低应验证：
     - 服务启动自动注册
     - 网关可动态发现下游服务
     - 下游实例变更后无需硬编码改地址
+  - 已完成：
+    - provider 侧已接入 `etcd registry`
+    - consumer 侧已在 `gateway` 接入 `etcd resolver`
+  - 待完成：
+    - 完整验证实例摘除、重启和故障恢复
 
 - [ ] 设计服务间超时、重试、降级策略
   - 尤其关注：
@@ -252,8 +300,8 @@
 
 - [ ] 为核心接口补齐参数校验
   - 重点文件：
-    - [video-platform/api/video/v1](/home/particle/2025-2/west2onlie_GoWeb/work5/video-platform/api/video/v1)
-    - [video-platform/biz/handler/v1](/home/particle/2025-2/west2onlie_GoWeb/work5/video-platform/biz/handler/v1)
+    - [idl/http](/home/particle/2025-2/west2onlie_GoWeb/work5/idl/http)
+    - [services/gateway](/home/particle/2025-2/west2onlie_GoWeb/work5/services/gateway)
 
 - [ ] 统一错误处理链路
   - 目标：
@@ -302,7 +350,7 @@
 ### 2. CI 完善
 
 - [ ] 检查 [golangci-lint workflow](/home/particle/2025-2/west2onlie_GoWeb/work5/.github/workflows/golangci-lint.yml) 是否只监听 `main`
-- [ ] 检查 [unit-test workflow](/home/particle/2025-2/west2onlie_GoWeb/work5/.github/workflows/unit-test.yml) 是否覆盖 `video-platform` 与 `test`
+- [ ] 检查 [unit-test workflow](/home/particle/2025-2/west2onlie_GoWeb/work5/.github/workflows/unit-test.yml) 是否覆盖根模块与 `test`
 - [ ] 检查 [codeql workflow](/home/particle/2025-2/west2onlie_GoWeb/work5/.github/workflows/codeql.yml) 的扫描路径是否正确
 - [ ] 视情况增加构建检查，确保 proto 更新后能成功编译
 - [ ] 新增微服务构建检查
@@ -313,7 +361,7 @@
 
 ### 3. README 与部署文档
 
-- [ ] 精简 [video-platform/README.md](/home/particle/2025-2/west2onlie_GoWeb/work5/video-platform/README.md)
+- [x] 拆除 `shared/` 过渡目录并完成顶层目录重构
   - 目标：
     - README 保持项目概览
     - 细节下沉到 `docs/`

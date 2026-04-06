@@ -2,13 +2,53 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "FanOne Video Platform",
+            "name": "Gateway",
             "type": "go",
             "request": "launch",
             "mode": "auto",
-            "program": "${workspaceFolder}/video-platform",
-            "cwd": "${workspaceFolder}/video-platform",
-            "envFile": "${workspaceFolder}/video-platform/.env",
+            "program": "${workspaceFolder}/services/gateway",
+            "cwd": "${workspaceFolder}/services/gateway",
+            "envFile": "${workspaceFolder}/.runtime/micro.env",
+            "showLog": true
+        },
+        {
+            "name": "User Service",
+            "type": "go",
+            "request": "launch",
+            "mode": "auto",
+            "program": "${workspaceFolder}/services/user",
+            "cwd": "${workspaceFolder}/services/user",
+            "envFile": "${workspaceFolder}/.runtime/micro.env",
+            "showLog": true
+        },
+        {
+            "name": "Video Service",
+            "type": "go",
+            "request": "launch",
+            "mode": "auto",
+            "program": "${workspaceFolder}/services/video",
+            "cwd": "${workspaceFolder}/services/video",
+            "envFile": "${workspaceFolder}/.runtime/micro.env",
+            "showLog": true
+        },
+        {
+            "name": "Interaction Service",
+            "type": "go",
+            "request": "launch",
+            "mode": "auto",
+            "program": "${workspaceFolder}/services/interaction",
+            "cwd": "${workspaceFolder}/services/interaction",
+            "envFile": "${workspaceFolder}/.runtime/micro.env",
+            "showLog": true
+        },
+        {
+            "name": "Chat Service",
+            "type": "go",
+            "request": "launch",
+            "mode": "auto",
+            "program": "${workspaceFolder}/services/chat",
+            "cwd": "${workspaceFolder}/services/chat",
+            "envFile": "${workspaceFolder}/.runtime/micro.env",
             "showLog": true
         },
         {
@@ -18,10 +58,29 @@
             "mode": "auto",
             "program": "${workspaceFolder}/test",
             "cwd": "${workspaceFolder}/test",
-            "env": {
-                "BASE_URL": "http://localhost:8888"
-            },
+            "envFile": "${workspaceFolder}/.runtime/micro.env",
             "showLog": true
+        }
+    ],
+    "compounds": [
+        {
+            "name": "Core Services",
+            "configurations": [
+                "User Service",
+                "Video Service",
+                "Interaction Service",
+                "Gateway"
+            ]
+        },
+        {
+            "name": "All Services",
+            "configurations": [
+                "User Service",
+                "Video Service",
+                "Interaction Service",
+                "Chat Service",
+                "Gateway"
+            ]
         }
     ]
 }

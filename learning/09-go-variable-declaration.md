@@ -10,7 +10,7 @@
 在实现互动模块点赞功能时，发现以下代码：
 
 ```go
-// video-platform/biz/handler/v1/interaction_service.go:85-88
+// shared/biz/handler/v1/interaction_service.go:85-88
 videoID, err := util.ParseUint(req.VideoId)  // err 首次声明
 if err != nil {
     // 错误处理
@@ -81,7 +81,7 @@ a, err := bar()  // ❌ 编译错误：no new variables on left side of :=
 ### 代码分析
 
 ```go
-// video-platform/biz/handler/v1/interaction_service.go:70-88
+// shared/biz/handler/v1/interaction_service.go:70-88
 videoID, err := util.ParseUint(req.VideoId)  // ① err 首次声明
 if err != nil {
     c.JSON(consts.StatusBadRequest, &v1.VideoLikeActionResponse{
@@ -422,9 +422,9 @@ func example() {
 
 | 文件 | 行号 | 说明 |
 |------|------|------|
-| [interaction_service.go](../video-platform/biz/handler/v1/interaction_service.go#L85) | 85 | `videoID, err := util.ParseUint(...)` - err 首次声明 |
-| [interaction_service.go](../video-platform/biz/handler/v1/interaction_service.go#L88) | 88 | `err = store.WithTx(...)` - 单变量赋值必须用 = |
-| [user_service.go](../video-platform/biz/handler/v1/user_service.go) | 多处 | 错误处理链中 err 的复用示例 |
+| [interaction_service.go](../shared/biz/handler/v1/interaction_service.go#L85) | 85 | `videoID, err := util.ParseUint(...)` - err 首次声明 |
+| [interaction_service.go](../shared/biz/handler/v1/interaction_service.go#L88) | 88 | `err = store.WithTx(...)` - 单变量赋值必须用 = |
+| [user_service.go](../shared/biz/handler/v1/user_service.go) | 多处 | 错误处理链中 err 的复用示例 |
 
 ---
 

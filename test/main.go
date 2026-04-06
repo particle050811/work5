@@ -29,7 +29,7 @@ func main() {
 	// 先检查服务是否可用
 	fmt.Println("【0】检查服务连接...")
 	if !checkServerAvailable(client, baseURL) {
-		fmt.Println("    ✗ 无法连接到服务器，请确保服务已启动: go run .")
+		fmt.Println("    ✗ 无法连接到服务器，请先在仓库根目录执行 ./scripts/dev-up.sh")
 		fmt.Println("    服务地址:", baseURL)
 		os.Exit(1)
 	}

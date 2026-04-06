@@ -1,9 +1,0 @@
-.git
-.gitignore
-.env
-__debug_bin*
-fanone-video
-video-platform
-output/
-*.log
-storage

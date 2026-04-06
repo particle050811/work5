@@ -21,7 +21,7 @@
 `TableName()` 是 GORM 的约定接口，用于指定模型对应的数据库表名：
 
 ```go
-// video-platform/biz/dal/model/video.go:25-27
+// shared/biz/dal/model/video.go:25-27
 func (Video) TableName() string {
     return "videos"
 }
@@ -38,13 +38,13 @@ func (Video) TableName() string {
 ### 2.3 实际代码位置
 
 ```go
-// video-platform/biz/dal/store.go:79 - 自动迁移
+// shared/biz/dal/store.go:79 - 自动迁移
 &model.Video{},
 
-// video-platform/biz/dal/db/video_dao.go:42 - 查询
+// shared/biz/dal/db/video_dao.go:42 - 查询
 store.DB().Model(&model.Video{})
 
-// video-platform/biz/dal/db/video_dao.go:47 - JOIN 语句
+// shared/biz/dal/db/video_dao.go:47 - JOIN 语句
 tx = tx.Where("(videos.title LIKE ? OR videos.description LIKE ?)", kw, kw)
 tx = tx.Joins("JOIN users ON users.id = videos.user_id")
 ```
@@ -108,7 +108,7 @@ FollowingID uint `gorm:"uniqueIndex:idx_follower_following"`
 ### 3.5 类似设计：VideoLike
 
 ```go
-// video-platform/biz/dal/model/like.go:10-16
+// shared/biz/dal/model/like.go:10-16
 type VideoLike struct {
     UserID  uint `gorm:"uniqueIndex:idx_user_video;not null"`
     VideoID uint `gorm:"uniqueIndex:idx_user_video;index;not null"`
@@ -189,7 +189,7 @@ FollowerID uint `gorm:"uniqueIndex:idx_follower_following;index;not null"`
 ## 6. Follow 模型完整设计
 
 ```go
-// video-platform/biz/dal/model/follow.go
+// shared/biz/dal/model/follow.go
 package model
 
 import (
@@ -310,11 +310,11 @@ db.Unscoped().Model(&follow).Update("deleted_at", nil)
 
 | 文件 | 行号 | 内容 |
 |------|------|------|
-| [model/video.go](../video-platform/biz/dal/model/video.go#L25-L27) | 25-27 | Video TableName() |
-| [model/like.go](../video-platform/biz/dal/model/like.go#L10-L20) | 10-20 | VideoLike 联合唯一索引 |
-| [model/follow.go](../video-platform/biz/dal/model/follow.go) | 全文件 | Follow 模型定义 |
-| [store.go](../video-platform/biz/dal/store.go#L79) | 79 | AutoMigrate 注册模型 |
-| [video_dao.go](../video-platform/biz/dal/db/video_dao.go#L47) | 47 | SQL 中使用表名 |
+| [model/video.go](../shared/biz/dal/model/video.go#L25-L27) | 25-27 | Video TableName() |
+| [model/like.go](../shared/biz/dal/model/like.go#L10-L20) | 10-20 | VideoLike 联合唯一索引 |
+| [model/follow.go](../shared/biz/dal/model/follow.go) | 全文件 | Follow 模型定义 |
+| [store.go](../shared/biz/dal/store.go#L79) | 79 | AutoMigrate 注册模型 |
+| [video_dao.go](../shared/biz/dal/db/video_dao.go#L47) | 47 | SQL 中使用表名 |
 
 ---
 

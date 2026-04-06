@@ -1,0 +1,12 @@
+go 1.25.3
+
+use (
+	.
+	./gen/rpc
+	./services/chat
+	./services/gateway
+	./services/interaction
+	./test
+	./services/user
+	./services/video
+)

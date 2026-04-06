@@ -1,8 +1,0 @@
-.DS_Store
-/.idea
-/.vscode
-/output
-/fanone-video
-/video-platform
-__debug_bin*
-dumped_hertz_remote_config.json

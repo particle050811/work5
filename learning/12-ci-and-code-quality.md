@@ -58,9 +58,9 @@ push / pull_request / 手动触发
     ↓
 checkout 仓库代码
     ↓
-根据 video-platform/go.mod 安装 Go
+根据 shared/go.mod 安装 Go
     ↓
-在 video-platform 目录执行 golangci-lint
+在 shared 目录执行 golangci-lint
     ↓
 读取仓库根目录的 .golangci.yml
 ```
@@ -72,7 +72,7 @@ on:
   push:
     branches: [main, master]
     paths:
-      - "video-platform/**"
+      - "shared/**"
       - ".golangci.yml"
       - ".github/workflows/golangci-lint.yml"
 
@@ -86,14 +86,14 @@ jobs:
       - uses: golangci/golangci-lint-action@v9
         with:
           version: v2.1
-          working-directory: video-platform
+          working-directory: shared
           args: --config=../.golangci.yml
 ```
 
 设计要点：
 
 1. `paths` 过滤可以避免无关文件改动也触发 lint。
-2. `working-directory: video-platform` 是因为 Go 模块根目录不在仓库根目录。
+2. `working-directory: shared` 是因为 Go 模块根目录不在仓库根目录。
 3. `args: --config=../.golangci.yml` 显式指定配置文件位置，避免 action 在子目录中找不到根目录配置。
 
 ---
@@ -183,7 +183,7 @@ linters-settings:
 
 文件位置：
 
-- `video-platform/swagger/swagger.go:38-52`
+- `shared/swagger/swagger.go:38-52`
 
 当前代码：
 
@@ -241,7 +241,7 @@ go 1.25.3
 
 文件位置：
 
-- `video-platform/go.mod:3`
+- `shared/go.mod:3`
 
 而 Github Actions 里最初下载的 `golangci-lint v1.64.8` 是用 `go1.24` 构建的，导致报错：
 
@@ -262,7 +262,7 @@ is lower than the targeted Go version (1.25.3)
   uses: golangci/golangci-lint-action@v9
   with:
     version: v2.1
-    working-directory: video-platform
+    working-directory: shared
     args: --config=../.golangci.yml
 ```
 
@@ -383,8 +383,8 @@ Docker Image
 - `.github/workflows/unit-test.yml:1`
 - `.github/workflows/docker-image.yml:1`
 - `.golangci.yml:1`
-- `video-platform/go.mod:3`
-- `video-platform/swagger/swagger.go:38`
+- `shared/go.mod:3`
+- `shared/swagger/swagger.go:38`
 
 ---
 

@@ -1,0 +1,97 @@
+syntax = "proto3";
+
+package fanone.api.video.v1;
+
+option go_package = "example.com/fanone/work5/idl/http/gen/v1;v1";
+
+import "idl/http/api.proto";
+import "idl/http/common/v1/common.proto";
+
+// SocialProfile 描述关注/粉丝/好友列表里的用户信息
+message SocialProfile {
+  string id = 1;
+  string username = 2;
+  string avatar_url = 3; // 用户头像 URL，用于前端展示
+}
+
+// SocialListWithTotal 用于社交相关的分页结果
+message SocialListWithTotal {
+  repeated SocialProfile items = 1;
+  int64 total = 2;
+}
+
+// RelationActionType 关注行为类型
+enum RelationActionType {
+  RELATION_ACTION_TYPE_UNSPECIFIED = 0;
+  RELATION_ACTION_TYPE_FOLLOW = 1;
+  RELATION_ACTION_TYPE_UNFOLLOW = 2;
+}
+
+// ---------- 社交模块请求/响应 ----------
+
+message RelationActionRequest {
+  string to_user_id = 1 [(.api.body) = "to_user_id"];
+  int32 action_type = 2 [(.api.body) = "action_type"]; // 1: 关注, 2: 取关
+}
+
+message RelationActionResponse {
+  BaseResponse base = 1;
+}
+
+// ListFollowingsRequest: 获取"关注列表"（我关注了谁）
+// 例：user_id=A → 返回 A 关注的所有人
+//     A ──关注──▶ B, C, D  → 返回 [B, C, D]
+message ListFollowingsRequest {
+  string user_id = 1 [(.api.query) = "user_id"];
+  int32 page_num = 2 [(.api.query) = "page_num"];
+  int32 page_size = 3 [(.api.query) = "page_size"];
+}
+
+message ListFollowingsResponse {
+  BaseResponse base = 1;
+  SocialListWithTotal data = 2;
+}
+
+// ListFollowersRequest: 获取"粉丝列表"（谁关注了我）
+// 例：user_id=A → 返回关注 A 的所有人
+//     B, C, D ──关注──▶ A  → 返回 [B, C, D]
+message ListFollowersRequest {
+  string user_id = 1 [(.api.query) = "user_id"];
+  int32 page_num = 2 [(.api.query) = "page_num"];
+  int32 page_size = 3 [(.api.query) = "page_size"];
+}
+
+message ListFollowersResponse {
+  BaseResponse base = 1;
+  SocialListWithTotal data = 2;
+}
+
+// ListFriendsRequest: 获取"好友列表"（互相关注）
+// 只能查自己的好友，user_id 从 JWT Token 中获取
+// 例：A ◀──关注──▶ B （互关）→ B 出现在 A 的好友列表中
+message ListFriendsRequest {
+  int32 page_num = 1 [(.api.query) = "page_num"];
+  int32 page_size = 2 [(.api.query) = "page_size"];
+}
+
+message ListFriendsResponse {
+  BaseResponse base = 1;
+  SocialListWithTotal data = 2;
+}
+
+// ---------- Handler 定义 ----------
+
+service RelationHandler {
+  rpc RelationAction(RelationActionRequest) returns (RelationActionResponse) {
+    option (.api.post) = "/api/v1/relation/action";
+  }
+  rpc ListFollowings(ListFollowingsRequest) returns (ListFollowingsResponse) {
+    option (.api.get) = "/api/v1/relation/following/list";
+  }
+  rpc ListFollowers(ListFollowersRequest) returns (ListFollowersResponse) {
+    option (.api.get) = "/api/v1/relation/follower/list";
+  }
+  rpc ListFriends(ListFriendsRequest) returns (ListFriendsResponse) {
+    option (.api.get) = "/api/v1/relation/friend/list";
+  }
+}

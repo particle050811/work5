@@ -1,0 +1,193 @@
+syntax = "proto3";
+
+package fanone.rpc.interaction.v1;
+
+option go_package = "example.com/fanone/gen-rpc/kitex_gen/interaction/v1;interactionv1";
+
+message Video {
+  uint64 id = 1;
+  uint64 user_id = 2;
+  string video_url = 3;
+  string cover_url = 4;
+  string title = 5;
+  string description = 6;
+  int64 visit_count = 7;
+  int64 like_count = 8;
+  int64 comment_count = 9;
+  string created_at = 10;
+  string updated_at = 11;
+  string deleted_at = 12;
+}
+
+message VideoList {
+  repeated Video items = 1;
+  int64 total = 2;
+}
+
+message Comment {
+  uint64 id = 1;
+  uint64 user_id = 2;
+  uint64 video_id = 3;
+  uint64 parent_id = 4;
+  int64 like_count = 5;
+  int64 child_count = 6;
+  string content = 7;
+  string created_at = 8;
+  string updated_at = 9;
+  string deleted_at = 10;
+}
+
+message CommentList {
+  repeated Comment items = 1;
+  int64 total = 2;
+}
+
+message SocialProfile {
+  uint64 id = 1;
+  string username = 2;
+  string avatar_url = 3;
+}
+
+message SocialList {
+  repeated SocialProfile items = 1;
+  int64 total = 2;
+}
+
+message VideoLikeActionRequest {
+  uint64 user_id = 1;
+  uint64 video_id = 2;
+  int32 action_type = 3;
+}
+
+message VideoLikeActionResponse {
+  int64 applied_delta = 1;
+}
+
+message ListLikedVideosRequest {
+  uint64 user_id = 1;
+  int32 page_num = 2;
+  int32 page_size = 3;
+}
+
+message ListLikedVideosResponse {
+  VideoList data = 1;
+}
+
+message PublishCommentRequest {
+  uint64 user_id = 1;
+  uint64 video_id = 2;
+  string content = 3;
+}
+
+message PublishCommentResponse {}
+
+message ListUserCommentsRequest {
+  uint64 user_id = 1;
+  int32 page_num = 2;
+  int32 page_size = 3;
+}
+
+message ListUserCommentsResponse {
+  CommentList data = 1;
+}
+
+message DeleteCommentRequest {
+  uint64 user_id = 1;
+  uint64 comment_id = 2;
+}
+
+message DeleteCommentResponse {
+  uint64 video_id = 1;
+}
+
+message RelationActionRequest {
+  uint64 user_id = 1;
+  uint64 to_user_id = 2;
+  int32 action_type = 3;
+}
+
+message RelationActionResponse {}
+
+message ListFollowingsRequest {
+  uint64 user_id = 1;
+  int32 page_num = 2;
+  int32 page_size = 3;
+}
+
+message ListFollowingsResponse {
+  SocialList data = 1;
+}
+
+message ListFollowersRequest {
+  uint64 user_id = 1;
+  int32 page_num = 2;
+  int32 page_size = 3;
+}
+
+message ListFollowersResponse {
+  SocialList data = 1;
+}
+
+message ListFriendsRequest {
+  uint64 user_id = 1;
+  int32 page_num = 2;
+  int32 page_size = 3;
+}
+
+message ListFriendsResponse {
+  SocialList data = 1;
+}
+
+message ListVideoCommentsRequest {
+  uint64 video_id = 1;
+  int32 page_num = 2;
+  int32 page_size = 3;
+}
+
+message VideoComment {
+  uint64 id = 1;
+  uint64 user_id = 2;
+  string username = 3;
+  string avatar_url = 4;
+  string content = 5;
+  int64 like_count = 6;
+  string created_at = 7;
+}
+
+message VideoCommentList {
+  repeated VideoComment items = 1;
+  int64 total = 2;
+}
+
+message ListVideoCommentsResponse {
+  VideoCommentList data = 1;
+}
+
+message SyncUserRequest {
+  uint64 id = 1;
+  string username = 2;
+  string avatar_url = 3;
+}
+
+message SyncUserResponse {}
+
+message SyncVideoRequest {
+  Video video = 1;
+}
+
+message SyncVideoResponse {}
+
+service InteractionService {
+  rpc VideoLikeAction(VideoLikeActionRequest) returns (VideoLikeActionResponse);
+  rpc ListLikedVideos(ListLikedVideosRequest) returns (ListLikedVideosResponse);
+  rpc PublishComment(PublishCommentRequest) returns (PublishCommentResponse);
+  rpc ListUserComments(ListUserCommentsRequest) returns (ListUserCommentsResponse);
+  rpc ListVideoComments(ListVideoCommentsRequest) returns (ListVideoCommentsResponse);
+  rpc DeleteComment(DeleteCommentRequest) returns (DeleteCommentResponse);
+  rpc RelationAction(RelationActionRequest) returns (RelationActionResponse);
+  rpc ListFollowings(ListFollowingsRequest) returns (ListFollowingsResponse);
+  rpc ListFollowers(ListFollowersRequest) returns (ListFollowersResponse);
+  rpc ListFriends(ListFriendsRequest) returns (ListFriendsResponse);
+  rpc SyncUser(SyncUserRequest) returns (SyncUserResponse);
+  rpc SyncVideo(SyncVideoRequest) returns (SyncVideoResponse);
+}

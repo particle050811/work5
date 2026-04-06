@@ -27,7 +27,7 @@ h.Use(middleware.RequestLogMiddleware())
 统一请求日志中间件是在服务启动时全局挂载的：
 
 文件位置：
-- `video-platform/main.go:42-44`
+- `shared/main.go:42-44`
 
 关键代码：
 
@@ -44,7 +44,7 @@ h.Use(cors.Default())
 ## §3 RequestLogMiddleware 做了什么
 
 文件位置：
-- `video-platform/pkg/middleware/request_log.go:20-49`
+- `shared/pkg/middleware/request_log.go:20-49`
 
 中间件完整流程如下：
 
@@ -111,7 +111,7 @@ func RequestLogMiddleware() app.HandlerFunc {
 因为鉴权中间件会在 JWT 校验成功后，把用户信息写入 Hertz 上下文：
 
 文件位置：
-- `video-platform/pkg/middleware/auth.go:56-60`
+- `shared/pkg/middleware/auth.go:56-60`
 
 关键代码：
 
@@ -223,7 +223,7 @@ log.Printf("[视频模块][投稿] 保存视频文件失败 user_id=%d: %v", use
 当前项目没有把日志写入固定文件，而是输出到标准输出和标准错误。
 
 文件位置：
-- `video-platform/pkg/logger/logger.go:15-18`
+- `shared/pkg/logger/logger.go:15-18`
 
 关键配置：
 
@@ -258,8 +258,8 @@ cfg.ErrorOutputPaths = []string{"stderr"}
 项目在初始化 zap 日志器之后，还做了一层桥接，把标准库 `log` 的输出重定向到 zap：
 
 文件位置：
-- `video-platform/pkg/logger/logger.go:35-37`
-- `video-platform/pkg/logger/logger.go:62-70`
+- `shared/pkg/logger/logger.go:35-37`
+- `shared/pkg/logger/logger.go:62-70`
 
 关键代码：
 
@@ -305,13 +305,13 @@ RequestLogMiddleware 在请求结束后打印统一访问日志
 
 ## §10 关键代码位置
 
-- `video-platform/main.go:20-25`：初始化全局日志器
-- `video-platform/main.go:42-44`：挂载统一请求日志中间件
-- `video-platform/pkg/middleware/request_log.go:20-49`：请求日志中间件实现
-- `video-platform/pkg/middleware/request_log.go:51-57`：`request_id` 生成逻辑
-- `video-platform/pkg/middleware/auth.go:39-60`：JWT 校验并写入 `user_id`
-- `video-platform/pkg/logger/logger.go:13-40`：zap 初始化与标准库日志桥接
-- `video-platform/pkg/logger/logger.go:62-70`：`log.Printf` 转发实现
+- `shared/main.go:20-25`：初始化全局日志器
+- `shared/main.go:42-44`：挂载统一请求日志中间件
+- `shared/pkg/middleware/request_log.go:20-49`：请求日志中间件实现
+- `shared/pkg/middleware/request_log.go:51-57`：`request_id` 生成逻辑
+- `shared/pkg/middleware/auth.go:39-60`：JWT 校验并写入 `user_id`
+- `shared/pkg/logger/logger.go:13-40`：zap 初始化与标准库日志桥接
+- `shared/pkg/logger/logger.go:62-70`：`log.Printf` 转发实现
 
 ---
 

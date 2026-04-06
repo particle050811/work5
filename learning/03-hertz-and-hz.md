@@ -113,7 +113,7 @@ string username = 1 [(api.body) = "username"];
 string username = 1 [(.api.body) = "username"];
 ```
 
-**参考文件**：`video-platform/api.proto:9-31`
+**参考文件**：`shared/api.proto:9-31`
 
 ## 4. 生成的 Handler 结构
 
@@ -166,7 +166,7 @@ func GeneratedRegister(r *server.Hertz) {
 }
 ```
 
-**参考文件**：`video-platform/biz/router/register.go:11-17`
+**参考文件**：`shared/biz/router/register.go:11-17`
 
 ## 6. 响应格式规范：c.String vs c.JSON
 

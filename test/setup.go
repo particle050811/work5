@@ -95,35 +95,61 @@ func isUserNotFound(msg string) bool {
 }
 
 func resetTestEnvironment() error {
-	dsn, err := getConfigValue("DB_DSN")
-	if err != nil {
-		return err
+	resetJobs := []struct {
+		key        string
+		statements []string
+	}{
+		{
+			key: "USER_DB_DSN",
+			statements: []string{
+				"SET FOREIGN_KEY_CHECKS = 0",
+				"TRUNCATE TABLE `users`",
+				"SET FOREIGN_KEY_CHECKS = 1",
+			},
+		},
+		{
+			key: "VIDEO_DB_DSN",
+			statements: []string{
+				"SET FOREIGN_KEY_CHECKS = 0",
+				"TRUNCATE TABLE `videos`",
+				"TRUNCATE TABLE `users`",
+				"SET FOREIGN_KEY_CHECKS = 1",
+			},
+		},
+		{
+			key: "INTERACTION_DB_DSN",
+			statements: []string{
+				"SET FOREIGN_KEY_CHECKS = 0",
+				"TRUNCATE TABLE `video_likes`",
+				"TRUNCATE TABLE `comments`",
+				"TRUNCATE TABLE `follows`",
+				"TRUNCATE TABLE `videos`",
+				"TRUNCATE TABLE `users`",
+				"SET FOREIGN_KEY_CHECKS = 1",
+			},
+		},
 	}
 
-	db, err := sql.Open("mysql", dsn)
-	if err != nil {
-		return fmt.Errorf("连接测试数据库失败: %w", err)
-	}
-	defer db.Close()
-
-	if err := db.Ping(); err != nil {
-		return fmt.Errorf("测试数据库不可用: %w", err)
-	}
-
-	statements := []string{
-		"SET FOREIGN_KEY_CHECKS = 0",
-		"TRUNCATE TABLE `video_likes`",
-		"TRUNCATE TABLE `comments`",
-		"TRUNCATE TABLE `follows`",
-		"TRUNCATE TABLE `videos`",
-		"TRUNCATE TABLE `users`",
-		"SET FOREIGN_KEY_CHECKS = 1",
-	}
-
-	for _, stmt := range statements {
-		if _, err := db.Exec(stmt); err != nil {
-			return fmt.Errorf("执行 SQL 失败 [%s]: %w", stmt, err)
+	for _, job := range resetJobs {
+		dsn, err := getServiceDSN(job.key)
+		if err != nil {
+			return err
 		}
+		db, err := sql.Open("mysql", dsn)
+		if err != nil {
+			return fmt.Errorf("连接测试数据库失败 key=%s: %w", job.key, err)
+		}
+		if err := db.Ping(); err != nil {
+			_ = db.Close()
+			return fmt.Errorf("测试数据库不可用 key=%s: %w", job.key, err)
+		}
+		for _, stmt := range job.statements {
+			if _, err := db.Exec(stmt); err != nil {
+				_ = db.Close()
+				return fmt.Errorf("执行 SQL 失败 key=%s [%s]: %w", job.key, stmt, err)
+			}
+		}
+		_ = db.Close()
 	}
 
 	if err := clearRedisCache(); err != nil {
@@ -235,7 +261,7 @@ func setVideoVisitCount(videoID string, visitCount int64) error {
 }
 
 func setVideoHotStats(videoID string, visitCount, likeCount, commentCount int64) error {
-	dsn, err := getConfigValue("DB_DSN")
+	dsn, err := getServiceDSN("VIDEO_DB_DSN")
 	if err != nil {
 		return err
 	}
@@ -256,6 +282,13 @@ func setVideoHotStats(videoID string, visitCount, likeCount, commentCount int64)
 		return fmt.Errorf("更新视频热度字段失败 video_id=%s: %w", videoID, err)
 	}
 	return nil
+}
+
+func getServiceDSN(key string) (string, error) {
+	if value, ok := getConfigValueOptional(key); ok && strings.TrimSpace(value) != "" {
+		return value, nil
+	}
+	return "", fmt.Errorf("未找到配置 %s，请先执行 scripts/dev-up.sh 或设置环境变量", key)
 }
 
 func prepareRelationFixture(client *http.Client, baseURL string) (*RelationFixture, error) {
@@ -315,7 +348,7 @@ func getConfigValue(key string) (string, error) {
 	if value, ok := loadValueFromEnvFile(key); ok {
 		return value, nil
 	}
-	return "", fmt.Errorf("未找到配置 %s，请先设置环境变量或 video-platform/.env", key)
+	return "", fmt.Errorf("未找到配置 %s，请先设置环境变量或仓库内的 .env 文件", key)
 }
 
 func getConfigValueOptional(key string) (string, bool) {
@@ -327,7 +360,8 @@ func getConfigValueOptional(key string) (string, bool) {
 
 func loadValueFromEnvFile(key string) (string, bool) {
 	candidates := []string{
-		"../video-platform/.env",
+		"../.runtime/micro.env",
+		"../.env",
 		".env",
 	}
 

@@ -1,0 +1,90 @@
+syntax = "proto3";
+
+package fanone.api.video.v1;
+
+option go_package = "example.com/fanone/work5/idl/http/gen/v1;v1";
+
+import "idl/http/api.proto";
+import "idl/http/common/v1/common.proto";
+
+// User 是用户数据结构
+message User {
+  string id = 1;
+  string username = 2;
+  string avatar_url = 3; // 用户头像 URL，用于前端展示
+  string created_at = 4;
+  string updated_at = 5;
+  string deleted_at = 6; // deleted_at 为空 = 未删除，不为空 = 已删除
+}
+
+// ---------- 用户模块请求/响应 ----------
+
+message RegisterRequest {
+  string username = 1 [(.api.body) = "username", (.api.vd) = "len($) > 0 && len($) < 50"];
+  string password = 2 [(.api.body) = "password", (.api.vd) = "len($) >= 6"];
+}
+
+message RegisterResponse {
+  BaseResponse base = 1;
+}
+
+message LoginRequest {
+  string username = 1 [(.api.body) = "username"];
+  string password = 2 [(.api.body) = "password"];
+}
+
+message LoginResponse {
+  BaseResponse base = 1;
+  User data = 2;
+  string access_token = 3;  // 访问令牌，有效期 15 分钟
+  string refresh_token = 4; // 刷新令牌，有效期 7 天
+}
+
+message GetUserInfoRequest {
+  string user_id = 1 [(.api.query) = "user_id"];
+}
+
+message GetUserInfoResponse {
+  BaseResponse base = 1;
+  User data = 2;
+}
+
+// UploadAvatarRequest: 文件通过 multipart/form-data 上传，不在 proto 中定义
+// 实际 handler 中使用 c.FormFile("avatar") 获取文件
+message UploadAvatarRequest {}
+
+message UploadAvatarResponse {
+  BaseResponse base = 1;
+  User data = 2;
+}
+
+// RefreshTokenRequest: 使用 refresh_token 换取新的 access_token
+message RefreshTokenRequest {
+  string refresh_token = 1 [(.api.body) = "refresh_token"];
+}
+
+message RefreshTokenResponse {
+  BaseResponse base = 1;
+  string access_token = 2;  // 新的访问令牌
+  string refresh_token = 3; // 新的刷新令牌（可选：滑动刷新）
+}
+
+// ---------- Handler 定义 ----------
+
+service UserHandler {
+  rpc Register(RegisterRequest) returns (RegisterResponse) {
+    option (.api.post) = "/api/v1/user/register";
+  }
+  rpc Login(LoginRequest) returns (LoginResponse) {
+    option (.api.post) = "/api/v1/user/login";
+  }
+  rpc RefreshToken(RefreshTokenRequest) returns (RefreshTokenResponse) {
+    option (.api.post) = "/api/v1/user/refresh";
+  }
+  rpc GetUserInfo(GetUserInfoRequest) returns (GetUserInfoResponse) {
+    option (.api.get) = "/api/v1/user/info";
+  }
+  rpc UploadAvatar(UploadAvatarRequest) returns (UploadAvatarResponse) {
+    option (.api.post) = "/api/v1/user/avatar";
+  }
+}

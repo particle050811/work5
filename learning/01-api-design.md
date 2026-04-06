@@ -72,8 +72,8 @@ func PublishVideo(ctx context.Context, c *app.RequestContext) {
 
 ### 文件引用
 
-- `video-platform/api/video/v1/video.proto:143-148` - PublishVideoRequest 定义
-- `video-platform/api/video/v1/video.proto:132-134` - UploadAvatarRequest 定义
+- `shared/api/video/v1/video.proto:143-148` - PublishVideoRequest 定义
+- `shared/api/video/v1/video.proto:132-134` - UploadAvatarRequest 定义
 
 ### 关键点
 

@@ -173,7 +173,7 @@ func (m *JWTManager) generateToken(userID uint, username string, tokenType Token
             ExpiresAt: jwt.NewNumericDate(now.Add(expiry)),
             IssuedAt:  jwt.NewNumericDate(now),
             NotBefore: jwt.NewNumericDate(now),
-            Issuer:    "fanone-video-platform",
+            Issuer:    "fanone-shared",
         },
     }
 

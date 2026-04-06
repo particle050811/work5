@@ -1,0 +1,21 @@
+syntax = "proto3";
+
+package fanone.rpc.common.v1;
+
+option go_package = "example.com/fanone/gen-rpc/kitex_gen/common/v1;commonv1";
+
+message Empty {}
+
+message BaseResponse {
+  int32 code = 1;
+  string msg = 2;
+}
+
+message PageRequest {
+  int32 page_num = 1;
+  int32 page_size = 2;
+}
+
+message PageResult {
+  int64 total = 1;
+}
